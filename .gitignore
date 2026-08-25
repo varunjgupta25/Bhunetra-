@@ -1,3 +1,9 @@
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -29,6 +35,9 @@ env/
 
 # Environment Variables & Secrets
 .env
+.env.local
+.env.*.local
+frontend/.env
 firebase-adminsdk.json
 *.pem
 *.key
