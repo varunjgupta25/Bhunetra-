@@ -1,6 +1,7 @@
 # Bhunetra Backend (SIH26018)
 ## Intelligent Land Record Digitization and Validation System
 **Ministry of Rural Development & Department of Land Resources (DoLR)**
+*Status: Live Integration active with React/Vite Frontend*
 
 ---
 
