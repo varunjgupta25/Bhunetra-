@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAppStore } from '@/store/useAppStore'
 import { recordsApi } from '@/api/axiosClient'
+import { DigitizedPdfModal } from '@/components/DigitizedPdfModal'
 
 export default function VerificationPage() {
   const { user, pendingVerificationCount, decrementPendingCount, lastExtractedResult } = useAppStore()
@@ -17,6 +18,7 @@ export default function VerificationPage() {
   const [isSaved, setIsSaved] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(100)
   const [rotation, setRotation] = useState(0)
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false)
 
   useEffect(() => {
     // If an extracted result from pipeline exists, seed form state dynamically
@@ -328,14 +330,25 @@ export default function VerificationPage() {
           </div>
 
           {/* Action Footer */}
-          <div className="px-6 py-4 bg-surface-container-low border-t border-[#D0E8F5] flex justify-between items-center gap-4">
-            <button
-              onClick={handleReset}
-              className="px-5 py-2.5 rounded-2xl font-label-sm text-label-sm text-secondary hover:bg-surface-container-highest transition-colors border border-transparent hover:border-[#B8D8EE] cursor-pointer"
-              type="button"
-            >
-              Reset Edits
-            </button>
+          <div className="px-6 py-4 bg-surface-container-low border-t border-[#D0E8F5] flex flex-wrap justify-between items-center gap-4">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleReset}
+                className="px-4 py-2 rounded-2xl font-label-sm text-xs text-secondary hover:bg-surface-container-highest transition-colors border border-transparent hover:border-[#B8D8EE] cursor-pointer"
+                type="button"
+              >
+                Reset Edits
+              </button>
+              <button
+                onClick={() => setIsPdfModalOpen(true)}
+                className="px-4 py-2 rounded-2xl font-label-sm text-xs bg-surface-container-highest text-primary font-semibold hover:bg-surface-container-high transition-colors border border-outline-variant/40 flex items-center gap-1.5 cursor-pointer"
+                type="button"
+              >
+                <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
+                Export Digitized PDF Certificate
+              </button>
+            </div>
+
             <button
               onClick={handleApprove}
               disabled={isSaved}
@@ -354,6 +367,30 @@ export default function VerificationPage() {
           </div>
         </div>
       </div>
+
+      {/* Pre-Generation Multilingual PDF Selection Modal */}
+      <DigitizedPdfModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        recordData={{
+          recordId: recordId,
+          khasraNumber: formState.khasraNumber,
+          khataNumber: '582',
+          ownerName: formState.ownerName,
+          ownerNameEn: formState.ownerName,
+          village: 'खडकवासला',
+          villageEn: 'Khadakwasla',
+          tehsil: 'हवेली',
+          tehsilEn: 'Haveli',
+          district: 'पुणे',
+          districtEn: 'Pune',
+          landArea: `${formState.area} हेक्टर`,
+          landAreaEn: `${formState.area} Hectares`,
+        }}
+        onConfirmExport={(lang) => {
+          console.log(`[PDF Generator] Certificate generated directly in ${lang} language`)
+        }}
+      />
     </main>
   )
 }

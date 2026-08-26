@@ -124,30 +124,11 @@ async def execute_processing_pipeline(doc_id: str, file_bytes: bytes, user_uid: 
         # 1. OCR Extraction (Bhashini API wrapper with resilient fallback)
         ocr_result = await ocr_service.extract_text(file_bytes, source_language="mr")
 
-        # 2. Extract structured fields (Simulated / Groq parser)
-        # Note: Groq LLM full stage will be wired in Phase 2; here we extract fields and validate
+        # 2. Extract structured fields with dedicated XGBoost ML Engine (100% Offline & Sovereign)
+        from app.services.ml_structuring_engine import ml_structuring_engine
         raw_text = ocr_result.raw_text
         
-        # Parse fields from OCR text blocks
-        khasra = "142/3A" if "142/3A" in raw_text or "142" in raw_text else "142/3"
-        khata = "582" if "582" in raw_text else "58"
-        owner = "रमेश विठ्ठल पाटील" if "रमेश" in raw_text else "Ramesh Patil"
-        village = "वाघोली" if "वाघोली" in raw_text else "Wagholi"
-        tehsil = "हवेली" if "हवेली" in raw_text else "Haveli"
-        district = "पुणे" if "पुणे" in raw_text else "Pune"
-        area = "1.45 हेक्टर" if "हेक्टर" in raw_text or "1.45" in raw_text else "1.45 Hectare"
-        ownership = "भोगवटादार वर्ग - १"
-
-        extracted = ExtractedLandFields(
-            khasraNumber=khasra,
-            khataNumber=khata,
-            ownerName=owner,
-            village=village,
-            tehsil=tehsil,
-            district=district,
-            landArea=area,
-            ownershipType=ownership
-        )
+        extracted, ml_scores = ml_structuring_engine.extract_fields(raw_text)
 
         # 3. Apply Validation Rules
         initial_scores = {k: 0.92 for k in ExtractedLandFields.model_fields.keys()}
