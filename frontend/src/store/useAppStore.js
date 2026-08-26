@@ -19,6 +19,10 @@ const getInitialTheme = () => {
 }
 
 export const useAppStore = create((set, get) => ({
+  // --- MULTILINGUAL STATE (22 Official Constitutional Languages) ---
+  currentLanguage: 'mr',
+  setLanguage: (langCode) => set({ currentLanguage: langCode }),
+
   // --- AUTH STATE ---
   user: DEFAULT_USER,
   isAuthenticated: true,

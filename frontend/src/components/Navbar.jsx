@@ -16,6 +16,8 @@ export function Navbar() {
     theme,
     toggleTheme,
     switchDemoRole,
+    currentLanguage,
+    setLanguage,
   } = useAppStore()
 
   const currentRole = user?.role || 'officer'
@@ -70,8 +72,8 @@ export function Navbar() {
           <div className="flex items-center gap-1.5 font-semibold text-[11px]">
             <span className="text-amber-400 hidden lg:inline">📜 संविधान २२ भाषा:</span>
             <select
-              value={selectedLang}
-              onChange={(e) => setSelectedLang(e.target.value)}
+              value={currentLanguage || 'mr'}
+              onChange={(e) => setLanguage(e.target.value)}
               className="bg-[#142B52] text-amber-300 text-[11px] font-bold border border-amber-500/50 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer"
             >
               {CONSTITUTION_22_LANGUAGES.map((lang) => (
