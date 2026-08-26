@@ -34,6 +34,13 @@ export function getLanguageByCode(code) {
 
 export const UI_TRANSLATIONS = {
   mr: {
+    headerGovIndia: "🇮🇳 भारत सरकार | Govt. of India",
+    headerDept: "महाराष्ट्र शासन - महसूल व वन विभाग",
+    headerTitle: "भूनेत्रा - राज्य भूमी अभिलेख संगणकीकरण प्रणाली",
+    roleTag: "पद (Role):",
+    roleOfficer: "तहसीलदार",
+    roleVerifier: "तलाठी",
+    roleAdmin: "प्रशासक",
     welcome: "पुन्हा स्वागत आहे",
     subtitle: "कृत्रिम बुद्धिमत्ता आधारित भूमी अभिलेख संगणकीकरण प्रणाली",
     totalDigitized: "एकूण डिजिटाईज्ड अभिलेख",
@@ -53,6 +60,13 @@ export const UI_TRANSLATIONS = {
     gisTab: "नकाशा / GIS",
   },
   hi: {
+    headerGovIndia: "🇮🇳 भारत सरकार | Govt. of India",
+    headerDept: "महाराष्ट्र सरकार - राजस्व एवं वन विभाग",
+    headerTitle: "भूनेत्र - राज्य भूमि अभिलेख डिजिटलीकरण प्रणाली",
+    roleTag: "पद (Role):",
+    roleOfficer: "तहसीलदार",
+    roleVerifier: "पटवारी / तलाठी",
+    roleAdmin: "प्रशासक",
     welcome: "पुनः स्वागत है",
     subtitle: "कृत्रिम बुद्धिमत्ता आधारित भूमि अभिलेख डिजिटलीकरण एवं निगरानी पोर्टल",
     totalDigitized: "कुल डिजिटाइज़्ड अभिलेख",
@@ -72,6 +86,13 @@ export const UI_TRANSLATIONS = {
     gisTab: "मानचित्र / GIS",
   },
   en: {
+    headerGovIndia: "🇮🇳 Govt. of India",
+    headerDept: "Govt. of Maharashtra - Revenue & Forest Dept.",
+    headerTitle: "BHUNETRA - State Land Records Modernization System",
+    roleTag: "Role:",
+    roleOfficer: "Revenue Officer",
+    roleVerifier: "Field Verifier",
+    roleAdmin: "Administrator",
     welcome: "Welcome back",
     subtitle: "AI-assisted land record digitization and monitoring portal",
     totalDigitized: "TOTAL RECORDS DIGITIZED",

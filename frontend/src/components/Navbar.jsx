@@ -1,12 +1,11 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAppStore } from '@/store/useAppStore'
-import { CONSTITUTION_22_LANGUAGES } from '@/utils/languages'
+import { CONSTITUTION_22_LANGUAGES, t } from '@/utils/languages'
 
 export function Navbar() {
   const location = useLocation()
   const [fontSize, setFontSize] = useState('normal')
-  const [selectedLang, setSelectedLang] = useState('mr')
 
   const {
     user,
@@ -20,30 +19,31 @@ export function Navbar() {
     setLanguage,
   } = useAppStore()
 
+  const lang = currentLanguage || 'mr'
   const currentRole = user?.role || 'officer'
 
   const navItems = [
     {
-      label: 'मुख्य पृष्ठ (Dashboard)',
+      label: t('dashboardTab', lang),
       path: '/',
       icon: 'dashboard',
       roles: ['admin', 'verifier', 'officer'],
     },
     {
-      label: '७/१२ अपलोड (Upload)',
+      label: t('uploadTab', lang),
       path: '/upload',
       icon: 'cloud_upload',
       roles: ['admin', 'officer'],
     },
     {
-      label: 'महसूल पडताळणी (Queue)',
+      label: t('queueTab', lang),
       path: '/verification',
       icon: 'fact_check',
       badge: pendingVerificationCount,
       roles: ['admin', 'verifier'],
     },
     {
-      label: 'नकाशा / GIS',
+      label: t('gisTab', lang),
       path: '/records',
       icon: 'map',
       roles: ['admin', 'verifier', 'officer'],
@@ -55,9 +55,9 @@ export function Navbar() {
       {/* 1. Official Government Accessibility & 22 Constitutional Languages Bar */}
       <div className="bg-[#0A1E3F] text-slate-200 text-[11px] py-1.5 px-4 flex justify-between items-center border-b border-amber-500/40">
         <div className="flex items-center gap-3">
-          <span className="font-semibold text-amber-400">🇮🇳 भारत सरकार | Govt. of India</span>
+          <span className="font-semibold text-amber-400">{t('headerGovIndia', lang)}</span>
           <span className="hidden sm:inline text-slate-400">|</span>
-          <span className="hidden sm:inline font-semibold text-slate-200">महाराष्ट्र शासन - महसूल व वन विभाग</span>
+          <span className="hidden sm:inline font-semibold text-slate-200">{t('headerDept', lang)}</span>
         </div>
         <div className="flex items-center gap-4">
           {/* Accessibility controls */}
@@ -76,9 +76,9 @@ export function Navbar() {
               onChange={(e) => setLanguage(e.target.value)}
               className="bg-[#142B52] text-amber-300 text-[11px] font-bold border border-amber-500/50 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer"
             >
-              {CONSTITUTION_22_LANGUAGES.map((lang) => (
-                <option key={lang.code} value={lang.code} className="bg-[#0F2C59] text-white">
-                  {lang.icon} {lang.nameNative} ({lang.nameEn})
+              {CONSTITUTION_22_LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code} className="bg-[#0F2C59] text-white">
+                  {l.icon} {l.nameNative} ({l.nameEn})
                 </option>
               ))}
             </select>
@@ -102,14 +102,14 @@ export function Navbar() {
             <Link to="/" className="flex flex-col text-left">
               <div className="flex items-center gap-2">
                 <span className="text-amber-400 font-bold tracking-wide text-xs sm:text-sm uppercase">
-                  महाराष्ट्र शासन | Govt. of Maharashtra
+                  {t('headerDept', lang)}
                 </span>
                 <span className="bg-amber-500/20 text-amber-300 text-[10px] px-2 py-0.5 rounded border border-amber-400/40 font-mono">
                   NIC STANDARDS
                 </span>
               </div>
               <h1 className="text-lg sm:text-xl font-extrabold text-white tracking-tight leading-tight flex items-center gap-2">
-                <span>भूनेत्रा - राज्य भूमी अभिलेख संगणकीकरण प्रणाली</span>
+                <span>{t('headerTitle', lang)}</span>
               </h1>
               <span className="text-[11px] text-slate-300 hidden sm:block">
                 Digital India Land Records Modernization Programme (DILRMP) Gateway
@@ -123,7 +123,7 @@ export function Navbar() {
               <>
                 {/* Role Switcher for Hackathon Demo */}
                 <div className="hidden lg:flex items-center gap-1 bg-[#0A1E3F] p-1 rounded border border-slate-600 text-xs">
-                  <span className="px-1.5 text-[10px] font-semibold text-amber-400 uppercase">पद (Role):</span>
+                  <span className="px-1.5 text-[10px] font-semibold text-amber-400 uppercase">{t('roleTag', lang)}</span>
                   {(['officer', 'verifier', 'admin']).map((r) => (
                     <button
                       key={r}
@@ -134,7 +134,7 @@ export function Navbar() {
                           : 'text-slate-300 hover:text-white'
                       }`}
                     >
-                      {r === 'officer' ? 'तहसीलदार' : r === 'verifier' ? 'तलाठी' : 'प्रशासक'}
+                      {r === 'officer' ? t('roleOfficer', lang) : r === 'verifier' ? t('roleVerifier', lang) : t('roleAdmin', lang)}
                     </button>
                   ))}
                 </div>
