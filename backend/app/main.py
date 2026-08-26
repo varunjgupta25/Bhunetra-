@@ -16,6 +16,7 @@ from app.firebase_config import initialize_firebase, is_firebase_connected
 from app.routes.documents import router as documents_router
 from app.routes.records import router as records_router
 from app.routes.dashboard import router as dashboard_router
+from app.routes.audit import router as audit_router
 
 # Setup Logging
 logging.basicConfig(
@@ -111,6 +112,7 @@ async def health_check():
 app.include_router(documents_router)
 app.include_router(records_router)
 app.include_router(dashboard_router)
+app.include_router(audit_router)
 
 
 if __name__ == "__main__":

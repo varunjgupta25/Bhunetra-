@@ -112,6 +112,86 @@ async def upload_document(
     )
 
 
+@router.post(
+    "/batch",
+    status_code=status.HTTP_201_CREATED,
+    summary="Batch Upload Multiple Land Record Documents"
+)
+async def upload_documents_batch(
+    files: list[UploadFile] = File(...),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """
+    Accepts up to 10 scanned land record documents simultaneously, queues them in storage,
+    and automatically triggers parallel AI digitization background workers.
+    """
+    if not files or len(files) == 0:
+        raise HTTPException(status_code=400, detail="At least one file must be provided.")
+    if len(files) > 10:
+        raise HTTPException(status_code=400, detail="Maximum 10 files allowed per batch upload.")
+
+    uploaded_docs = []
+    db = get_db()
+    bucket = get_storage_bucket()
+
+    for file in files:
+        if not file.filename:
+            continue
+        file_bytes = await file.read()
+        doc_id = str(uuid.uuid4())
+        file_ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+        storage_path = f"documents/{doc_id}.{file_ext}"
+        uploaded_at = datetime.now(timezone.utc).isoformat()
+        file_type = "pdf" if file.filename.lower().endswith(".pdf") else "image"
+
+        if bucket:
+            try:
+                blob = bucket.blob(storage_path)
+                blob.upload_from_string(file_bytes, content_type=file.content_type)
+                storage_url = generate_signed_url(storage_path)
+            except Exception:
+                storage_url = f"/api/documents/static/{storage_path}"
+        else:
+            storage_url = f"/api/documents/static/{storage_path}"
+
+        DOC_FILE_CACHE[doc_id] = {
+            "bytes": file_bytes,
+            "filename": file.filename,
+            "content_type": file.content_type or "image/jpeg"
+        }
+
+        doc_data = {
+            "docId": doc_id,
+            "fileName": file.filename,
+            "storageUrl": storage_url,
+            "storagePath": storage_path,
+            "fileType": file_type,
+            "uploadedBy": user.uid,
+            "uploadedAt": uploaded_at,
+            "status": DocumentStatus.PROCESSING.value,
+            "district": None,
+            "village": None,
+        }
+        db.collection("documents").document(doc_id).set(doc_data)
+
+        # Trigger background processing
+        background_tasks.add_task(execute_processing_pipeline, doc_id, file_bytes, user.uid)
+
+        uploaded_docs.append({
+            "docId": doc_id,
+            "fileName": file.filename,
+            "status": "processing",
+            "storageUrl": storage_url
+        })
+
+    return {
+        "message": f"Successfully queued {len(uploaded_docs)} documents for parallel AI digitization.",
+        "batchSize": len(uploaded_docs),
+        "documents": uploaded_docs
+    }
+
+
 async def execute_processing_pipeline(doc_id: str, file_bytes: bytes, user_uid: str):
     """
     Background Task: Executes OCR -> Validation -> Confidence Scoring -> Firestore commits.
