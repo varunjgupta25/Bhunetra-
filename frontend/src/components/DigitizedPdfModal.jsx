@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { CONSTITUTION_22_LANGUAGES } from '@/utils/languages'
 
 export function DigitizedPdfModal({ isOpen, onClose, recordData, onConfirmExport }) {
   const [selectedLanguage, setSelectedLanguage] = useState('mr') // 'mr', 'en', 'hi'
@@ -71,113 +72,53 @@ export function DigitizedPdfModal({ isOpen, onClose, recordData, onConfirmExport
 
         {/* Modal Body */}
         {!showCertificateView ? (
-          /* STEP 1: Pre-Generation Multilingual Selection */
-          <div className="p-6 space-y-6">
+            <div className="p-6 space-y-6">
             <p className="text-sm text-on-surface-variant">
-              Select the official certificate language below. The local ML engine will generate the digitized land extract PDF in a single pass without extra database conversions.
+              Select any of the <strong>22 Official Constitutional Languages of India (8th Schedule)</strong> below. The local ML engine will generate the digitized land extract PDF in a single pass without extra database conversions.
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Option 1: Marathi */}
-              <div
-                onClick={() => setSelectedLanguage('mr')}
-                className={`p-5 rounded-2xl border-2 cursor-pointer transition-all duration-200 flex flex-col justify-between ${
-                  selectedLanguage === 'mr'
-                    ? 'border-primary bg-primary-container/10 shadow-md scale-[1.02]'
-                    : 'border-[#B8D8EE] bg-[#F4F9FE] hover:bg-surface-container'
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-2xl">🚩</span>
-                    <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center border ${
-                        selectedLanguage === 'mr'
-                          ? 'bg-primary text-on-primary border-primary'
-                          : 'border-outline-variant'
-                      }`}
-                    >
-                      {selectedLanguage === 'mr' && (
-                        <span className="material-symbols-outlined text-xs font-bold">check</span>
-                      )}
-                    </div>
-                  </div>
-                  <h4 className="font-bold text-on-surface text-base">1. Marathi (मराठी)</h4>
-                  <p className="text-xs text-on-surface-variant mt-1">
-                    7/12 Extract Official State Format (महाराष्ट्र शासन मूळ नमुना)
-                  </p>
-                </div>
-                <span className="mt-4 inline-block text-[11px] font-semibold text-primary bg-primary-container/20 px-2.5 py-1 rounded-full text-center">
-                  Recommended for State Revenue
-                </span>
+            {/* 22 Constitutional Languages Dropdown & Quick Selector */}
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-surface-container-low p-4 rounded-2xl border border-[#B8D8EE]">
+                <label className="text-xs font-bold text-on-surface flex items-center gap-2">
+                  <span className="text-lg">📜</span>
+                  <span>Select Target Certificate Language (२२ संविधानात्मक भाषा):</span>
+                </label>
+                <select
+                  value={selectedLanguage}
+                  onChange={(e) => setSelectedLanguage(e.target.value)}
+                  className="bg-white text-slate-900 text-sm font-bold border-2 border-primary rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer w-full sm:w-auto"
+                >
+                  {CONSTITUTION_22_LANGUAGES.map((lang) => (
+                    <option key={lang.code} value={lang.code}>
+                      {lang.icon} {lang.nameNative} — {lang.nameEn} ({lang.script} Script)
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              {/* Option 2: English */}
-              <div
-                onClick={() => setSelectedLanguage('en')}
-                className={`p-5 rounded-2xl border-2 cursor-pointer transition-all duration-200 flex flex-col justify-between ${
-                  selectedLanguage === 'en'
-                    ? 'border-primary bg-primary-container/10 shadow-md scale-[1.02]'
-                    : 'border-[#B8D8EE] bg-[#F4F9FE] hover:bg-surface-container'
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-2xl">🇬🇧</span>
-                    <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center border ${
-                        selectedLanguage === 'en'
-                          ? 'bg-primary text-on-primary border-primary'
-                          : 'border-outline-variant'
-                      }`}
-                    >
-                      {selectedLanguage === 'en' && (
-                        <span className="material-symbols-outlined text-xs font-bold">check</span>
+              {/* Quick Featured Languages Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {CONSTITUTION_22_LANGUAGES.slice(0, 4).map((lang) => (
+                  <button
+                    key={lang.code}
+                    type="button"
+                    onClick={() => setSelectedLanguage(lang.code)}
+                    className={`p-3 rounded-xl border-2 text-left transition-all ${
+                      selectedLanguage === lang.code
+                        ? 'border-primary bg-primary-container/20 font-bold shadow-sm'
+                        : 'border-outline-variant/60 hover:bg-surface-container-low'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between text-xs">
+                      <span>{lang.icon} {lang.nameNative}</span>
+                      {selectedLanguage === lang.code && (
+                        <span className="material-symbols-outlined text-primary text-xs font-bold">check_circle</span>
                       )}
                     </div>
-                  </div>
-                  <h4 className="font-bold text-on-surface text-base">2. English</h4>
-                  <p className="text-xs text-on-surface-variant mt-1">
-                    Translated Official Revenue Certificate
-                  </p>
-                </div>
-                <span className="mt-4 inline-block text-[11px] font-semibold text-secondary bg-secondary-container/30 px-2.5 py-1 rounded-full text-center">
-                  Ideal for Bank Loans &amp; Audits
-                </span>
-              </div>
-
-              {/* Option 3: Hindi */}
-              <div
-                onClick={() => setSelectedLanguage('hi')}
-                className={`p-5 rounded-2xl border-2 cursor-pointer transition-all duration-200 flex flex-col justify-between ${
-                  selectedLanguage === 'hi'
-                    ? 'border-primary bg-primary-container/10 shadow-md scale-[1.02]'
-                    : 'border-[#B8D8EE] bg-[#F4F9FE] hover:bg-surface-container'
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-2xl">🇮🇳</span>
-                    <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center border ${
-                        selectedLanguage === 'hi'
-                          ? 'bg-primary text-on-primary border-primary'
-                          : 'border-outline-variant'
-                      }`}
-                    >
-                      {selectedLanguage === 'hi' && (
-                        <span className="material-symbols-outlined text-xs font-bold">check</span>
-                      )}
-                    </div>
-                  </div>
-                  <h4 className="font-bold text-on-surface text-base">3. Hindi (हिंदी)</h4>
-                  <p className="text-xs text-on-surface-variant mt-1">
-                    राष्ट्रीय मानकीकृत राजस्व प्रमाण पत्र
-                  </p>
-                </div>
-                <span className="mt-4 inline-block text-[11px] font-semibold text-on-surface-variant bg-surface-container-highest px-2.5 py-1 rounded-full text-center">
-                  National Standardized Format
-                </span>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">{lang.nameEn}</span>
+                  </button>
+                ))}
               </div>
             </div>
 

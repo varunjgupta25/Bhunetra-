@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAppStore } from '@/store/useAppStore'
+import { CONSTITUTION_22_LANGUAGES } from '@/utils/languages'
 
 export function Navbar() {
   const location = useLocation()
   const [fontSize, setFontSize] = useState('normal')
-  const [currentLang, setCurrentLang] = useState('mr')
+  const [selectedLang, setSelectedLang] = useState('mr')
 
   const {
     user,
@@ -49,7 +50,7 @@ export function Navbar() {
 
   return (
     <>
-      {/* 1. Official Government Accessibility & Language Top Bar */}
+      {/* 1. Official Government Accessibility & 22 Constitutional Languages Bar */}
       <div className="bg-[#0A1E3F] text-slate-200 text-[11px] py-1.5 px-4 flex justify-between items-center border-b border-amber-500/40">
         <div className="flex items-center gap-3">
           <span className="font-semibold text-amber-400">🇮🇳 भारत सरकार | Govt. of India</span>
@@ -64,13 +65,21 @@ export function Navbar() {
             <button onClick={() => setFontSize('normal')} className={`px-1 rounded ${fontSize === 'normal' ? 'bg-amber-500 text-slate-950 font-bold' : 'hover:text-amber-300'}`}>A</button>
             <button onClick={() => setFontSize('large')} className={`px-1 rounded ${fontSize === 'large' ? 'bg-amber-500 text-slate-950 font-bold' : 'hover:text-amber-300'}`}>A+</button>
           </div>
-          {/* Language Switcher */}
-          <div className="flex items-center gap-1 font-semibold text-[11px]">
-            <button onClick={() => setCurrentLang('mr')} className={`px-1.5 py-0.5 rounded ${currentLang === 'mr' ? 'bg-amber-400 text-slate-950 font-bold' : 'text-slate-300 hover:text-white'}`}>मराठी</button>
-            <span className="text-slate-500">|</span>
-            <button onClick={() => setCurrentLang('en')} className={`px-1.5 py-0.5 rounded ${currentLang === 'en' ? 'bg-amber-400 text-slate-950 font-bold' : 'text-slate-300 hover:text-white'}`}>English</button>
-            <span className="text-slate-500">|</span>
-            <button onClick={() => setCurrentLang('hi')} className={`px-1.5 py-0.5 rounded ${currentLang === 'hi' ? 'bg-amber-400 text-slate-950 font-bold' : 'text-slate-300 hover:text-white'}`}>हिंदी</button>
+
+          {/* 22 Constitutional Languages Selector Dropdown */}
+          <div className="flex items-center gap-1.5 font-semibold text-[11px]">
+            <span className="text-amber-400 hidden lg:inline">📜 संविधान २२ भाषा:</span>
+            <select
+              value={selectedLang}
+              onChange={(e) => setSelectedLang(e.target.value)}
+              className="bg-[#142B52] text-amber-300 text-[11px] font-bold border border-amber-500/50 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer"
+            >
+              {CONSTITUTION_22_LANGUAGES.map((lang) => (
+                <option key={lang.code} value={lang.code} className="bg-[#0F2C59] text-white">
+                  {lang.icon} {lang.nameNative} ({lang.nameEn})
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>

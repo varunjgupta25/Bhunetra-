@@ -194,12 +194,12 @@ async def verify_record(
 @router.get("/{recordId}/export-pdf", summary="Export Digitized Land Record Certificate PDF in Selected Language")
 async def export_record_pdf(
     recordId: str,
-    lang: str = Query("mr", description="Target PDF certificate language (mr=Marathi, en=English, hi=Hindi)"),
+    lang: str = Query("mr", description="Target PDF certificate language code (22 Constitutional Languages supported: mr, hi, en, bn, ta, te, kn, ml, gu, pa, or, as, ur, sa, ks, sd, ne, kok, doi, mni, sat, brx, mai)"),
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """
     Generates and streams an official vectorized A4 Land Extract Certificate PDF
-    directly in the user's chosen language (Single-Pass Generation).
+    directly in the user's chosen language out of India's 22 Official Constitutional Languages.
     """
     db = get_db()
     snap = db.collection("records").document(recordId).get()
@@ -208,7 +208,8 @@ async def export_record_pdf(
         raise HTTPException(status_code=404, detail=f"Record '{recordId}' not found.")
 
     data = snap.to_dict()
-    lang_code = lang.lower() if lang in ["mr", "en", "hi"] else "mr"
+    valid_codes = ["mr", "hi", "en", "bn", "ta", "te", "kn", "ml", "gu", "pa", "or", "as", "ur", "sa", "ks", "sd", "ne", "kok", "doi", "mni", "sat", "brx", "mai"]
+    lang_code = lang.lower() if lang.lower() in valid_codes else "mr"
 
     # Minimal dynamic PDF text payload
     from fastapi.responses import Response
