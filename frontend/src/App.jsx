@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAppStore } from '@/store/useAppStore'
 import { Navbar } from '@/components/Navbar'
+import { Footer } from '@/components/Footer'
 import DashboardPage from '@/pages/Dashboard'
 import UploadPage from '@/pages/Upload'
 import VerificationPage from '@/pages/Verification'
@@ -23,7 +24,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="bg-background text-on-surface min-h-screen flex flex-col font-body-md pb-20 md:pb-0">
+      <div className="bg-[#F4F6F9] text-slate-900 min-h-screen flex flex-col font-body-md pb-20 md:pb-0">
         {/* Top & Mobile Bottom Navigation Bar */}
         <Navbar />
 
@@ -38,6 +39,9 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
+
+        {/* Official NIC Government Footer */}
+        <Footer />
       </div>
     </BrowserRouter>
   )

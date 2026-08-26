@@ -1,9 +1,12 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAppStore } from '@/store/useAppStore'
 
 export function Navbar() {
   const location = useLocation()
+  const [fontSize, setFontSize] = useState('normal')
+  const [currentLang, setCurrentLang] = useState('mr')
+
   const {
     user,
     isAuthenticated,
@@ -18,26 +21,26 @@ export function Navbar() {
 
   const navItems = [
     {
-      label: 'Dashboard',
+      label: 'मुख्य पृष्ठ (Dashboard)',
       path: '/',
       icon: 'dashboard',
       roles: ['admin', 'verifier', 'officer'],
     },
     {
-      label: 'Upload',
+      label: '७/१२ अपलोड (Upload)',
       path: '/upload',
       icon: 'cloud_upload',
       roles: ['admin', 'officer'],
     },
     {
-      label: 'Queue',
+      label: 'महसूल पडताळणी (Queue)',
       path: '/verification',
       icon: 'fact_check',
       badge: pendingVerificationCount,
       roles: ['admin', 'verifier'],
     },
     {
-      label: 'GIS',
+      label: 'नकाशा / GIS',
       path: '/records',
       icon: 'map',
       roles: ['admin', 'verifier', 'officer'],
@@ -46,27 +49,123 @@ export function Navbar() {
 
   return (
     <>
-      {/* TopAppBar Semantic Shell Header */}
-      <header className="bg-surface-lowest dark:bg-inverse-surface shadow-sm sticky top-0 z-50 h-[64px] border-b border-outline-variant/30 flex items-center w-full">
-        <div className="flex justify-between items-center w-full px-gutter max-w-full mx-auto">
-          {/* Logo & Branding */}
-          <div className="flex items-center gap-3">
-            <Link to="/" className="flex items-center gap-2 group">
-              <span className="material-symbols-outlined text-primary dark:text-inverse-primary text-2xl group-hover:scale-105 transition-transform" data-icon="layers">
-                layers
-              </span>
-              <span className="font-headline-md text-headline-md font-bold text-primary dark:text-inverse-primary tracking-tight">
-                BHUNETRA
-              </span>
-              <span className="font-mono-code text-xs bg-surface-container text-secondary px-2 py-0.5 rounded-full border border-secondary-fixed hidden sm:inline-block">
-                SIH26018
+      {/* 1. Official Government Accessibility & Language Top Bar */}
+      <div className="bg-[#0A1E3F] text-slate-200 text-[11px] py-1.5 px-4 flex justify-between items-center border-b border-amber-500/40">
+        <div className="flex items-center gap-3">
+          <span className="font-semibold text-amber-400">🇮🇳 भारत सरकार | Govt. of India</span>
+          <span className="hidden sm:inline text-slate-400">|</span>
+          <span className="hidden sm:inline font-semibold text-slate-200">महाराष्ट्र शासन - महसूल व वन विभाग</span>
+        </div>
+        <div className="flex items-center gap-4">
+          {/* Accessibility controls */}
+          <div className="flex items-center gap-1 bg-[#142B52] px-2 py-0.5 rounded border border-slate-700">
+            <span className="text-[10px] text-slate-400 mr-1 hidden md:inline">Accessibility:</span>
+            <button onClick={() => setFontSize('small')} className={`px-1 rounded ${fontSize === 'small' ? 'bg-amber-500 text-slate-950 font-bold' : 'hover:text-amber-300'}`}>A-</button>
+            <button onClick={() => setFontSize('normal')} className={`px-1 rounded ${fontSize === 'normal' ? 'bg-amber-500 text-slate-950 font-bold' : 'hover:text-amber-300'}`}>A</button>
+            <button onClick={() => setFontSize('large')} className={`px-1 rounded ${fontSize === 'large' ? 'bg-amber-500 text-slate-950 font-bold' : 'hover:text-amber-300'}`}>A+</button>
+          </div>
+          {/* Language Switcher */}
+          <div className="flex items-center gap-1 font-semibold text-[11px]">
+            <button onClick={() => setCurrentLang('mr')} className={`px-1.5 py-0.5 rounded ${currentLang === 'mr' ? 'bg-amber-400 text-slate-950 font-bold' : 'text-slate-300 hover:text-white'}`}>मराठी</button>
+            <span className="text-slate-500">|</span>
+            <button onClick={() => setCurrentLang('en')} className={`px-1.5 py-0.5 rounded ${currentLang === 'en' ? 'bg-amber-400 text-slate-950 font-bold' : 'text-slate-300 hover:text-white'}`}>English</button>
+            <span className="text-slate-500">|</span>
+            <button onClick={() => setCurrentLang('hi')} className={`px-1.5 py-0.5 rounded ${currentLang === 'hi' ? 'bg-amber-400 text-slate-950 font-bold' : 'text-slate-300 hover:text-white'}`}>हिंदी</button>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Main Official Government NIC Banner */}
+      <header className="bg-gradient-to-r from-[#0F2C59] via-[#163A72] to-[#0F2C59] text-white shadow-md border-b-4 border-amber-500 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 py-2.5 flex justify-between items-center">
+          {/* National Emblem & Title Branding */}
+          <div className="flex items-center gap-4">
+            {/* Ashoka Emblem representation */}
+            <div className="flex flex-col items-center justify-center border-r border-amber-500/30 pr-4">
+              <div className="w-9 h-12 bg-amber-400/10 border border-amber-400/40 rounded flex flex-col items-center justify-center p-1 text-center">
+                <span className="text-[16px] leading-none">🏛️</span>
+                <span className="text-[7px] text-amber-300 font-bold uppercase mt-0.5">सत्यमेव जयते</span>
+              </div>
+            </div>
+
+            <Link to="/" className="flex flex-col text-left">
+              <div className="flex items-center gap-2">
+                <span className="text-amber-400 font-bold tracking-wide text-xs sm:text-sm uppercase">
+                  महाराष्ट्र शासन | Govt. of Maharashtra
+                </span>
+                <span className="bg-amber-500/20 text-amber-300 text-[10px] px-2 py-0.5 rounded border border-amber-400/40 font-mono">
+                  NIC STANDARDS
+                </span>
+              </div>
+              <h1 className="text-lg sm:text-xl font-extrabold text-white tracking-tight leading-tight flex items-center gap-2">
+                <span>भूनेत्रा - राज्य भूमी अभिलेख संगणकीकरण प्रणाली</span>
+              </h1>
+              <span className="text-[11px] text-slate-300 hidden sm:block">
+                Digital India Land Records Modernization Programme (DILRMP) Gateway
               </span>
             </Link>
           </div>
 
-          {/* Desktop Nav Cluster (Hidden on mobile) */}
-          {isAuthenticated && (
-            <nav className="hidden md:flex space-x-6 items-center h-full">
+          {/* Controls & User Profile Badge */}
+          <div className="flex items-center gap-3">
+            {isAuthenticated ? (
+              <>
+                {/* Role Switcher for Hackathon Demo */}
+                <div className="hidden lg:flex items-center gap-1 bg-[#0A1E3F] p-1 rounded border border-slate-600 text-xs">
+                  <span className="px-1.5 text-[10px] font-semibold text-amber-400 uppercase">पद (Role):</span>
+                  {(['officer', 'verifier', 'admin']).map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => switchDemoRole(r)}
+                      className={`px-2 py-0.5 rounded text-[11px] font-bold capitalize transition-all ${
+                        currentRole === r
+                          ? 'bg-amber-400 text-slate-950 shadow-sm'
+                          : 'text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      {r === 'officer' ? 'तहसीलदार' : r === 'verifier' ? 'तलाठी' : 'प्रशासक'}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Profile Badge */}
+                <div className="flex items-center gap-2.5 bg-[#1A3D73] px-3 py-1.5 rounded-lg border border-slate-600">
+                  <div className="w-8 h-8 rounded-full bg-amber-400 text-slate-950 font-bold flex items-center justify-center text-xs shadow-sm">
+                    {user?.displayName ? user.displayName.charAt(0) : 'के'}
+                  </div>
+                  <div className="hidden md:flex flex-col text-left">
+                    <span className="text-xs font-bold text-white leading-tight">
+                      {user?.displayName || 'के. एस. पाटील'}
+                    </span>
+                    <span className="text-[10px] text-amber-300 font-semibold">
+                      {user?.district || 'पुणे'} महसूल विभाग
+                    </span>
+                  </div>
+                  <button
+                    onClick={logout}
+                    className="ml-2 text-slate-300 hover:text-amber-400 transition-colors"
+                    title="बाहेर पडा (Logout)"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">logout</span>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                className="bg-amber-400 hover:bg-amber-300 text-slate-950 px-4 py-1.5 rounded-md text-xs font-bold shadow-sm transition-colors flex items-center gap-1"
+              >
+                <span className="material-symbols-outlined text-[16px]">lock</span>
+                <span>अधिकारी लॉगिन</span>
+              </Link>
+            )}
+          </div>
+        </div>
+
+        {/* 3. Official Government Sub-Navigation Tabs Bar */}
+        {isAuthenticated && (
+          <div className="bg-[#0A1E3F] border-t border-slate-700/60 px-4 hidden md:block">
+            <div className="max-w-7xl mx-auto flex space-x-1">
               {navItems.map((item) => {
                 const isActive = location.pathname === item.path
                 const isAllowed = item.roles.includes(currentRole)
@@ -76,104 +175,30 @@ export function Navbar() {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`h-full flex items-center font-label-sm text-label-sm px-2 transition-colors border-b-2 ${
+                    className={`px-4 py-2 text-xs font-bold flex items-center gap-1.5 transition-all border-b-2 ${
                       isActive
-                        ? 'text-primary dark:text-inverse-primary border-primary font-bold'
-                        : 'text-on-surface-variant dark:text-outline-variant border-transparent hover:bg-surface-container-low dark:hover:bg-surface-container-highest'
+                        ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-sm'
+                        : 'text-slate-200 hover:bg-[#142B52] hover:text-amber-300 border-transparent'
                     }`}
                   >
+                    <span className="material-symbols-outlined text-[16px]">{item.icon}</span>
                     <span>{item.label}</span>
                     {item.badge > 0 && item.path === '/verification' && (
-                      <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-amber-500 text-[10px] font-bold text-slate-950 animate-pulse">
+                      <span className="ml-1 px-1.5 py-0.2 rounded-full bg-red-600 text-white text-[10px] font-extrabold animate-pulse">
                         {item.badge}
                       </span>
                     )}
                   </Link>
                 )
               })}
-            </nav>
-          )}
-
-          {/* User Profile & Demo Role Selector Controls */}
-          <div className="flex items-center gap-3">
-            {isAuthenticated ? (
-              <>
-                {/* Role Selector Badge for Hackathon Demo */}
-                <div className="hidden lg:flex items-center gap-1 bg-surface-container-low p-1 rounded-lg border border-surface-variant text-xs">
-                  <span className="px-1 text-[10px] font-semibold text-secondary uppercase">Role:</span>
-                  {(['officer', 'verifier', 'admin']).map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => switchDemoRole(r)}
-                      className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all capitalize ${
-                        currentRole === r
-                          ? 'bg-primary text-on-primary shadow-sm'
-                          : 'text-on-surface-variant hover:text-primary'
-                      }`}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Theme Toggle */}
-                <button
-                  onClick={toggleTheme}
-                  className="p-1.5 text-on-surface-variant hover:text-primary rounded-lg hover:bg-surface-container-low transition-colors"
-                  title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
-                >
-                  <span className="material-symbols-outlined text-[20px]">
-                    {theme === 'dark' ? 'light_mode' : 'dark_mode'}
-                  </span>
-                </button>
-
-                {/* Profile Badge & Logout */}
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm text-label-sm font-bold shadow-sm">
-                    {user?.displayName ? user.displayName.charAt(0) : 'U'}
-                  </div>
-                  <div className="hidden md:flex flex-col text-left">
-                    <span className="font-label-sm text-label-sm text-on-surface leading-tight">
-                      {user?.displayName || 'K. S. Patil'}
-                    </span>
-                    <span className="text-[10px] text-secondary">
-                      {user?.district || 'Pune'} District
-                    </span>
-                  </div>
-                  <button
-                    onClick={logout}
-                    className="ml-2 text-xs text-secondary hover:text-error transition-colors p-1.5 rounded-lg hover:bg-error-container"
-                    title="Logout"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">logout</span>
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={toggleTheme}
-                  className="p-1.5 text-on-surface-variant hover:text-primary rounded-lg hover:bg-surface-container-low transition-colors"
-                >
-                  <span className="material-symbols-outlined text-[20px]">
-                    {theme === 'dark' ? 'light_mode' : 'dark_mode'}
-                  </span>
-                </button>
-                <Link
-                  to="/login"
-                  className="bg-primary text-on-primary px-4 py-2 rounded-xl text-xs font-semibold shadow-sm hover:bg-[#2DA090] transition-colors"
-                >
-                  Sign In
-                </Link>
-              </div>
-            )}
+            </div>
           </div>
-        </div>
+        )}
       </header>
 
-      {/* BottomNavBar (Mobile Only) */}
+      {/* Mobile Bottom Navigation */}
       {isAuthenticated && (
-        <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-safe h-16 bg-surface-container-lowest dark:bg-inverse-surface border-t border-outline-variant shadow-[0_-2px_16px_rgba(45,120,180,0.08)] rounded-t-xl">
+        <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 h-14 bg-[#0F2C59] border-t-2 border-amber-500 shadow-lg">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path
             const isAllowed = item.roles.includes(currentRole)
@@ -183,16 +208,14 @@ export function Navbar() {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex flex-col items-center justify-center transition-all ${
+                className={`flex flex-col items-center justify-center px-3 py-1 transition-all ${
                   isActive
-                    ? 'bg-primary-container text-on-primary-container rounded-2xl px-4 py-1 scale-95'
-                    : 'text-on-surface-variant hover:text-primary'
+                    ? 'bg-amber-400 text-slate-950 font-bold rounded-md'
+                    : 'text-slate-200 hover:text-amber-300'
                 }`}
               >
-                <span className="material-symbols-outlined text-[20px] mb-0.5" data-icon={item.icon}>
-                  {item.icon}
-                </span>
-                <span className="font-label-sm text-[11px]">{item.label}</span>
+                <span className="material-symbols-outlined text-[18px]">{item.icon}</span>
+                <span className="text-[10px]">{item.label.split(' ')[0]}</span>
               </Link>
             )
           })}
@@ -201,3 +224,4 @@ export function Navbar() {
     </>
   )
 }
+
