@@ -130,12 +130,27 @@ async def execute_processing_pipeline(doc_id: str, file_bytes: bytes, user_uid: 
         
         extracted, ml_scores = ml_structuring_engine.extract_fields(raw_text)
 
-        # 3. Apply Validation Rules
-        initial_scores = {k: 0.92 for k in ExtractedLandFields.model_fields.keys()}
+        # 3. Apply Validation Rules & Forensic ELA Analysis
+        initial_scores = ml_scores
         val_result = validator.validate_record(extracted, raw_confidence=initial_scores)
+
+        from app.services.forensic_validator import forensic_engine
+        existing_recs = [d.to_dict() for d in db.collection("records").get()]
+        forensic_report = forensic_engine.analyze_document(
+            image_bytes=file_bytes,
+            raw_text=raw_text,
+            khasra_no=extracted.khasraNumber,
+            village=extracted.village,
+            existing_records=existing_recs
+        )
 
         # 4. Compute Confidence & Status Routing
         overall_conf, ver_status, flagged = calculate_overall_confidence(val_result.field_scores)
+
+        # If forensic engine flagged forgery or collision, override status to PENDING_REVIEW
+        if forensic_report.authenticity_rating != "AUTHENTIC":
+            ver_status = VerificationStatus.PENDING_REVIEW
+            flagged.append("forensic_tamper_flag")
 
         # 5. Save Record to Firestore /records
         record_id = str(uuid.uuid4())
@@ -157,6 +172,7 @@ async def execute_processing_pipeline(doc_id: str, file_bytes: bytes, user_uid: 
             "overallConfidence": overall_conf,
             "verificationStatus": ver_status.value,
             "flaggedFields": flagged,
+            "forensicReport": forensic_report.model_dump(),
             "verifiedBy": None,
             "verifiedAt": None,
             "createdAt": now_iso,

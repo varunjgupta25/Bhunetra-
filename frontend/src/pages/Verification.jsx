@@ -227,7 +227,43 @@ export default function VerificationPage() {
             )}
           </div>
 
-          <div className="p-6 flex-1 overflow-y-auto">
+          <div className="p-6 flex-1 overflow-y-auto space-y-6">
+            {/* Forensic & Authenticity Security Panel */}
+            <div className="bg-[#F4F9FE] border border-[#B8D8EE] rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-deep-navy flex items-center gap-1.5 uppercase tracking-wider">
+                  <span className="material-symbols-outlined text-primary text-base">shield_with_heart</span>
+                  Forensic ELA &amp; Mutation Authenticity Analysis
+                </span>
+                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-300">
+                  99.4% AUTHENTIC
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="bg-white p-2.5 rounded-lg border border-[#D0E8F5]">
+                  <span className="text-gray-500 block text-[10px]">Image ELA Tamper Check</span>
+                  <span className="font-semibold text-emerald-700 flex items-center gap-1 mt-0.5">
+                    <span className="material-symbols-outlined text-xs">check_circle</span>
+                    Uniform Compression
+                  </span>
+                </div>
+                <div className="bg-white p-2.5 rounded-lg border border-[#D0E8F5]">
+                  <span className="text-gray-500 block text-[10px]">Mutation Ledger Match</span>
+                  <span className="font-semibold text-primary flex items-center gap-1 mt-0.5">
+                    <span className="material-symbols-outlined text-xs">history_edu</span>
+                    Ferfar #1842 Verified
+                  </span>
+                </div>
+                <div className="bg-white p-2.5 rounded-lg border border-[#D0E8F5]">
+                  <span className="text-gray-500 block text-[10px]">Village Claim Collision</span>
+                  <span className="font-semibold text-emerald-700 flex items-center gap-1 mt-0.5">
+                    <span className="material-symbols-outlined text-xs">verified</span>
+                    0 Collisions (Unique)
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <form className="flex flex-col gap-5" onSubmit={(e) => e.preventDefault()}>
               {/* Standard Field */}
               <div>
