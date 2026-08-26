@@ -4,26 +4,53 @@ import { useAppStore } from '@/store/useAppStore'
 import { dashboardApi } from '@/api/axiosClient'
 
 export default function DashboardPage() {
-  const { user, pendingVerificationCount } = useAppStore()
+  const { user, pendingVerificationCount, setPendingVerificationCount } = useAppStore()
   const [stats, setStats] = useState({
     totalProcessed: 1482,
     pendingReview: pendingVerificationCount || 7,
     autoApproved: 1395,
     averageConfidence: 0.894,
     byDistrict: [
-      { district: 'Pune', records: '450 Records Processing', percent: 92, confidence: '88%', isWarning: false },
-      { district: 'Nagpur', records: '320 Records Processing', percent: 78, confidence: '91%', isWarning: false },
-      { district: 'Nashik', records: '150 Records Processing', percent: 45, confidence: '82%', isWarning: true },
-      { district: 'Thane', records: '89 Records Processing', percent: 12, confidence: '79%', isWarning: true },
+      { district: 'Pune', count: 450, percent: 92, confidence: '88%', isWarning: false },
+      { district: 'Nagpur', count: 320, percent: 78, confidence: '91%', isWarning: false },
+      { district: 'Nashik', count: 150, percent: 45, confidence: '82%', isWarning: true },
+      { district: 'Thane', count: 89, percent: 12, confidence: '79%', isWarning: true },
     ],
   })
 
   useEffect(() => {
-    dashboardApi.getStats()
+    dashboardApi
+      .getStats()
       .then((data) => {
-        if (data) setStats((prev) => ({ ...prev, ...data }))
+        if (!data) return
+        if (data.pendingReview !== undefined) {
+          setPendingVerificationCount(data.pendingReview)
+        }
+        
+        const mappedDistricts = (data.byDistrict || []).map((d) => {
+          const maxCount = 500
+          const calcPercent = Math.min(Math.round((d.count / maxCount) * 100), 100)
+          const confVal = (d.avgConfidence * 100).toFixed(0) + '%'
+          return {
+            district: d.district,
+            count: d.count,
+            percent: calcPercent || 50,
+            confidence: confVal,
+            isWarning: d.avgConfidence < 0.85,
+          }
+        })
+
+        setStats({
+          totalProcessed: data.totalProcessed ?? 1482,
+          pendingReview: data.pendingReview ?? 7,
+          autoApproved: data.autoApproved ?? 1395,
+          averageConfidence: data.averageConfidence ?? 0.894,
+          byDistrict: mappedDistricts.length > 0 ? mappedDistricts : stats.byDistrict,
+        })
       })
-      .catch(() => {})
+      .catch(() => {
+        // Fallback default state
+      })
   }, [])
 
   return (
@@ -99,7 +126,10 @@ export default function DashboardPage() {
               {stats.autoApproved.toLocaleString()}
             </div>
             <div className="font-body-md text-body-md text-secondary mt-1">
-              94.1% bypass rate
+              {stats.totalProcessed > 0
+                ? ((stats.autoApproved / stats.totalProcessed) * 100).toFixed(1)
+                : '94.1'}
+              % bypass rate
             </div>
           </div>
         </div>
@@ -152,7 +182,7 @@ export default function DashboardPage() {
                 {item.district}
               </h3>
               <p className="font-label-sm text-label-sm text-secondary mb-4">
-                {item.records}
+                {item.count} Records Processing
               </p>
               <div className="w-full bg-surface-container-high rounded-full h-2 mb-2">
                 <div
