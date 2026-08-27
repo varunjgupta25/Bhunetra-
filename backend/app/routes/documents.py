@@ -18,6 +18,7 @@ from app.schemas.common import UserRole, DocumentStatus, VerificationStatus, Aud
 from app.schemas.document import DocumentUploadResponse, DocumentItem, DocumentListResponse
 from app.schemas.record import ExtractedLandFields
 from app.services.ocr_service import ocr_service
+from app.services.ml_structuring_engine import ml_structuring_engine
 from app.services.validation_rules import validator
 from app.utils.confidence import calculate_overall_confidence
 
@@ -205,10 +206,9 @@ async def execute_processing_pipeline(doc_id: str, file_bytes: bytes, user_uid: 
         ocr_result = await ocr_service.extract_text(file_bytes, source_language="mr")
 
         # 2. Extract structured fields with dedicated XGBoost ML Engine (100% Offline & Sovereign)
-        from app.services.ml_structuring_engine import ml_structuring_engine
-        raw_text = ocr_result.raw_text
-        
-        extracted, ml_scores = ml_structuring_engine.extract_fields(raw_text)
+        extracted, ml_scores = ml_structuring_engine.extract_fields(
+            raw_text, ocr_is_fallback=getattr(ocr_result, "is_fallback", False)
+        )
 
         # 3. Apply Validation Rules & Forensic ELA Analysis
         initial_scores = ml_scores
