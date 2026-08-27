@@ -24,8 +24,14 @@ export function Navbar() {
 
   const navItems = [
     {
-      label: t('dashboardTab', lang),
+      label: t('exploreTab', lang),
       path: '/',
+      icon: 'explore',
+      roles: ['admin', 'verifier', 'officer'],
+    },
+    {
+      label: t('dashboardTab', lang),
+      path: '/dashboard',
       icon: 'dashboard',
       roles: ['admin', 'verifier', 'officer'],
     },

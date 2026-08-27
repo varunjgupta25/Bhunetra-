@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAppStore } from '@/store/useAppStore'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
+import LandingPage from '@/pages/Landing'
 import DashboardPage from '@/pages/Dashboard'
 import UploadPage from '@/pages/Upload'
 import VerificationPage from '@/pages/Verification'
@@ -31,7 +32,8 @@ export default function App() {
         {/* Main Content Viewport */}
         <div className="flex-1 flex flex-col">
           <Routes>
-            <Route path="/" element={<DashboardPage />} />
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/upload" element={<UploadPage />} />
             <Route path="/verification" element={<VerificationPage />} />
