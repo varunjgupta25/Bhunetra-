@@ -125,7 +125,13 @@ class BhashiniOCRService:
             except Exception as e:
                 logger.error(f"Google Cloud Vision fallback failed: {e}")
 
-        # 4. Resilient Offline Local Fallback
+        # 4. Local Offline OCR Engine (EasyOCR / PyTesseract) — No API Key Required!
+        local_ocr_res = self._local_offline_ocr_engine(processed_bytes, source_language)
+        if local_ocr_res and local_ocr_res.raw_text.strip():
+            logger.info(f"Successfully extracted OCR via local offline engine: {local_ocr_res.source_engine}")
+            return local_ocr_res
+
+        # 5. Resilient Offline Local Fallback
         return self._offline_ocr_fallback(processed_bytes, source_language)
 
     async def _call_bhashini_api(self, b64_image: str, source_language: str) -> Optional[OCRResult]:
@@ -222,6 +228,68 @@ class BhashiniOCRService:
                         source_engine="google_vision_fallback",
                         is_fallback=True
                     )
+    def _local_offline_ocr_engine(self, image_bytes: bytes, source_language: str = "mr") -> Optional[OCRResult]:
+        """
+        100% Free, Offline Local OCR Alternative (EasyOCR / PyTesseract).
+        Requires ZERO API keys, no internet connection, and no Bhashini credentials.
+        Extracts real text directly from uploaded Marathi / Devanagari document images.
+        """
+        # Option A: EasyOCR (Deep-learning based, multilingual Devanagari OCR)
+        try:
+            import easyocr
+            import numpy as np
+            image = Image.open(io.BytesIO(image_bytes))
+            if image.mode != "RGB":
+                image = image.convert("RGB")
+            
+            # Load Marathi, Hindi, and English models
+            reader = easyocr.Reader(['mr', 'hi', 'en'], gpu=False)
+            results = reader.readtext(np.array(image))
+            
+            raw_parts = []
+            lines = []
+            for bbox, text, prob in results:
+                if text and text.strip():
+                    raw_parts.append(text.strip())
+                    lines.append({
+                        "text": text.strip(),
+                        "confidence": float(prob),
+                        "boundingBox": str(bbox)
+                    })
+            
+            full_text = "\n".join(raw_parts)
+            if full_text.strip():
+                return OCRResult(
+                    raw_text=full_text,
+                    lines=lines,
+                    language=source_language,
+                    source_engine="easyocr_local_offline",
+                    is_fallback=False  # Real OCR read!
+                )
+        except ImportError:
+            logger.debug("EasyOCR package not installed in environment.")
+        except Exception as e:
+            logger.warning(f"EasyOCR local extraction warning: {e}")
+
+        # Option B: PyTesseract (Tesseract OCR Engine for Marathi / Devanagari)
+        try:
+            import pytesseract
+            image = Image.open(io.BytesIO(image_bytes))
+            text = pytesseract.image_to_string(image, lang='mar+hin+eng')
+            if text and text.strip():
+                lines = [{"text": line.strip(), "confidence": 0.90} for line in text.split("\n") if line.strip()]
+                return OCRResult(
+                    raw_text=text.strip(),
+                    lines=lines,
+                    language=source_language,
+                    source_engine="pytesseract_local_offline",
+                    is_fallback=False  # Real OCR read!
+                )
+        except ImportError:
+            logger.debug("PyTesseract package not installed in environment.")
+        except Exception as e:
+            logger.warning(f"PyTesseract local extraction warning: {e}")
+
         return None
 
     def _offline_ocr_fallback(self, image_bytes: bytes, source_language: str) -> OCRResult:
