@@ -17,8 +17,10 @@ export function AuthForm() {
       setEmail('officer@dolr.gov.in')
     } else if (roleId === 'verifier') {
       setEmail('verifier@dolr.gov.in')
-    } else {
+    } else if (roleId === 'admin') {
       setEmail('admin@dolr.gov.in')
+    } else {
+      setEmail('citizen@gmail.com')
     }
   }
 
@@ -28,12 +30,12 @@ export function AuthForm() {
 
     try {
       await login({ email, password, role: selectedRole })
-      if (selectedRole === 'verifier') {
+      if (selectedRole === 'civilian') {
+        navigate('/citizen')
+      } else if (selectedRole === 'verifier') {
         navigate('/verification')
-      } else if (selectedRole === 'officer') {
-        navigate('/upload')
       } else {
-        navigate('/')
+        navigate('/dashboard')
       }
     } catch {
       // Fallback
@@ -46,10 +48,11 @@ export function AuthForm() {
     officer: 'Revenue Officer',
     verifier: 'Field Verifier',
     admin: 'Admin',
+    civilian: 'Citizen Portal',
   }
 
   return (
-    <main className="w-full max-w-md bg-surface-container-lowest border border-[#D0E8F5] rounded-[20px] login-shadow p-card-padding relative z-10 my-auto">
+    <main className="w-full max-w-lg bg-surface-container-lowest border border-[#D0E8F5] rounded-[20px] login-shadow p-card-padding relative z-10 my-auto">
       {/* Branding Header */}
       <header className="flex flex-col items-center mb-8 text-center">
         <div className="flex items-center gap-3 mb-4">
@@ -74,9 +77,9 @@ export function AuthForm() {
       </header>
 
       {/* Role Selector */}
-      <div className="bg-surface-container-low p-1 rounded-xl flex mb-6 border border-surface-variant">
+      <div className="bg-surface-container-low p-1 rounded-xl flex flex-wrap gap-1 mb-6 border border-surface-variant">
         <button
-          className={`flex-1 font-label-sm text-label-sm py-2 px-2 text-center rounded-lg transition-all whitespace-nowrap ${
+          className={`flex-1 font-label-sm text-xs py-2 px-2 text-center rounded-lg transition-all whitespace-nowrap ${
             selectedRole === 'officer'
               ? 'bg-surface-container-lowest text-primary shadow-sm font-bold'
               : 'text-on-surface-variant hover:text-primary'
@@ -87,7 +90,7 @@ export function AuthForm() {
           Revenue Officer
         </button>
         <button
-          className={`flex-1 font-label-sm text-label-sm py-2 px-2 text-center rounded-lg transition-all whitespace-nowrap ${
+          className={`flex-1 font-label-sm text-xs py-2 px-2 text-center rounded-lg transition-all whitespace-nowrap ${
             selectedRole === 'verifier'
               ? 'bg-surface-container-lowest text-primary shadow-sm font-bold'
               : 'text-on-surface-variant hover:text-primary'
@@ -98,7 +101,7 @@ export function AuthForm() {
           Field Verifier
         </button>
         <button
-          className={`flex-1 font-label-sm text-label-sm py-2 px-2 text-center rounded-lg transition-all ${
+          className={`flex-1 font-label-sm text-xs py-2 px-2 text-center rounded-lg transition-all ${
             selectedRole === 'admin'
               ? 'bg-surface-container-lowest text-primary shadow-sm font-bold'
               : 'text-on-surface-variant hover:text-primary'
@@ -107,6 +110,17 @@ export function AuthForm() {
           onClick={() => handleRoleChange('admin')}
         >
           Admin
+        </button>
+        <button
+          className={`flex-1 font-label-sm text-xs py-2 px-2 text-center rounded-lg transition-all whitespace-nowrap ${
+            selectedRole === 'civilian'
+              ? 'bg-amber-400 text-slate-950 shadow-sm font-bold'
+              : 'text-on-surface-variant hover:text-primary'
+          }`}
+          type="button"
+          onClick={() => handleRoleChange('civilian')}
+        >
+          🏛️ Citizen (नागरिक)
         </button>
       </div>
 
