@@ -79,10 +79,32 @@ def generate_million_database(num_records: int = 1000000, target_csv: bool = Tru
     # Fast bulk insertion
     cursor.execute("DELETE FROM records")
     
-    batch = []
+    # 3 Anchored Judge Demo Records (Matching printable paper demo documents)
+    ANCHORED_DEMO_RECORDS = [
+        (
+            "142/3A", "582", "रमेश विठ्ठल पाटील", "Ramesh Vitthal Patil", "विठ्ठल बाबुरावा पाटील",
+            "वाघोली", "Wagholi", "हवेली", "Haveli", "पुणे", "Pune",
+            1.45, 1.35, 0.10, "भोगवटादार वर्ग - १", "निरंक (Clear Title)",
+            "1842", "MH-27-PN-HV-WAG-1423A", "712MV-XG9-2026-PUNE-0941"
+        ),
+        (
+            "248", "104", "रमेश बाबुरावा पाटील", "Ramesh Baburao Patil", "बाबुराव विठ्ठल पाटील",
+            "खडकवासला", "Khadakwasla", "हवेली", "Haveli", "पुणे", "Pune",
+            1.25, 1.20, 0.05, "भोगवटादार वर्ग - १", "निरंक (Clear Title)",
+            "2041", "MH-27-PN-HV-KHD-0248", "712MV-XG9-2026-PUNE-0248"
+        ),
+        (
+            "105/B", "412", "गणेश पांडुरंग पवार", "Ganesh Pandurang Pawar", "पांडुरंग बापू पवार",
+            "त्र्यंबकेश्वर", "Trimbakeshwar", "नाशिक", "Nashik", "नाशिक", "Nashik",
+            3.10, 2.90, 0.20, "भोगवटादार वर्ग - १", "निरंक (Clear Title)",
+            "3045", "MH-27-NS-NS-TRM-0105", "712MV-XG9-2026-NASH-0105"
+        ),
+    ]
+
+    batch = list(ANCHORED_DEMO_RECORDS)
     batch_size = 50000
     
-    for i in range(1, num_records + 1):
+    for i in range(4, num_records + 1):
         fn_idx = random.randint(0, len(FIRST_NAMES_MR) - 1)
         mn_idx = random.randint(0, len(MIDDLE_NAMES_MR) - 1)
         sn_idx = random.randint(0, len(SURNAMES_MR) - 1)
