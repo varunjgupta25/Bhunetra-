@@ -22,6 +22,13 @@ function ProtectedRoute({ children, allowedRoles, redirectTo = '/citizen' }) {
   return children
 }
 
+function HomeRedirect() {
+  const { user, isAuthenticated } = useAppStore()
+  if (!isAuthenticated) return <LandingPage />
+  if (user?.role === 'civilian') return <Navigate to="/citizen" replace />
+  return <Navigate to="/dashboard" replace />
+}
+
 export default function App() {
   const { theme } = useAppStore()
 
@@ -44,7 +51,8 @@ export default function App() {
         {/* Main Content Viewport */}
         <div className="flex-1 flex flex-col">
           <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<HomeRedirect />} />
+            <Route path="/explore" element={<LandingPage />} />
             <Route path="/citizen" element={<CitizenPortalPage />} />
             <Route
               path="/dashboard"

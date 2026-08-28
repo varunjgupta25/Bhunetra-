@@ -24,22 +24,16 @@ export function Navbar() {
 
   const navItems = [
     {
-      label: t('exploreTab', lang),
-      path: '/',
-      icon: 'explore',
-      roles: ['admin', 'verifier', 'officer', 'civilian'],
+      label: t('dashboardTab', lang),
+      path: '/dashboard',
+      icon: 'dashboard',
+      roles: ['admin', 'verifier', 'officer'],
     },
     {
       label: t('citizenTab', lang),
       path: '/citizen',
       icon: 'account_balance',
       roles: ['civilian', 'admin'],
-    },
-    {
-      label: t('dashboardTab', lang),
-      path: '/dashboard',
-      icon: 'dashboard',
-      roles: ['admin', 'verifier', 'officer'],
     },
     {
       label: t('uploadTab', lang),
@@ -111,7 +105,7 @@ export function Navbar() {
               </div>
             </div>
 
-            <Link to="/" className="flex flex-col text-left">
+            <Link to={currentRole === 'civilian' ? '/citizen' : '/dashboard'} className="flex flex-col text-left">
               <div className="flex items-center gap-2">
                 <span className="text-amber-400 font-bold tracking-wide text-xs sm:text-sm uppercase">
                   {t('headerDept', lang)}
