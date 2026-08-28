@@ -20,7 +20,7 @@ export function AuthForm() {
     } else if (roleId === 'admin') {
       setEmail('admin@dolr.gov.in')
     } else {
-      setEmail('citizen@gmail.com')
+      setEmail('citizen.sharma@gmail.com')
     }
   }
 
