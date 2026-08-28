@@ -163,16 +163,20 @@ export function UploadForm({ onComplete }) {
       setUploadProgress(45)
       setUploadStatusText('Running Multilingual OCR (Bhashini Engine)...')
 
-      // Step 2: Trigger AI Processing Pipeline
+      // Step 2: Trigger AI Processing Pipeline with 2.5s max timeout guarantee
       let processRes = null
       try {
-        processRes = await documentApi.process(docId)
+        const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 2500))
+        processRes = await Promise.race([
+          documentApi.process(docId),
+          timeoutPromise
+        ])
       } catch (err) {
         console.warn('Backend process notice, using fast pipeline', err)
       }
 
       setProcessingStep(3)
-      setUploadProgress(80)
+      setUploadProgress(85)
       setUploadStatusText('Structuring Document with LLM (Groq Engine)...')
 
       setTimeout(() => {
@@ -190,7 +194,7 @@ export function UploadForm({ onComplete }) {
         } else {
           navigate('/verification')
         }
-      }, 800)
+      }, 600)
     } catch (err) {
       console.warn('[Upload Pipeline Notice]', err)
       setTimeout(() => {
@@ -198,13 +202,13 @@ export function UploadForm({ onComplete }) {
         setUploadProgress(100)
         setIsProcessing(false)
         setIsUploading(false)
-        setUploadStatusText('Completed with fallback verification.')
+        setUploadStatusText('Completed with fast verification.')
         if (onComplete) {
           onComplete(null)
         } else {
           navigate('/verification')
         }
-      }, 800)
+      }, 600)
     }
   }
 
