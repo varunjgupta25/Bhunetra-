@@ -22,6 +22,9 @@ export default function CitizenPortalPage() {
     status: 'VERIFIED',
     encumbrance: 'बँक ऑफ महाराष्ट्र पीक कर्ज बोजा रु. ५०,०००/-',
   })
+  const [showPdfModal, setShowPdfModal] = useState(false)
+  const [activeTab, setActiveTab] = useState('search')
+
   const handleUploadComplete = (extractedResult) => {
     if (extractedResult && extractedResult.entities) {
       const e = extractedResult.entities
