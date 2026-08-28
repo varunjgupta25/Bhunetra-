@@ -3,69 +3,27 @@ import { useAppStore } from '@/store/useAppStore'
 import { t } from '@/utils/languages'
 import { DigitizedPdfModal } from '@/components/DigitizedPdfModal'
 
+import { UploadForm } from '@/components/UploadForm'
+
 export default function CitizenPortalPage() {
   const { currentLanguage } = useAppStore()
   const lang = currentLanguage || 'mr'
 
-  const [searchDistrict, setSearchDistrict] = useState('Pune')
-  const [searchTehsil, setSearchTehsil] = useState('Haveli')
-  const [searchKhasra, setSearchKhasra] = useState('142/3A')
-  const [selectedRecord, setSelectedRecord] = useState(null)
+  const [selectedRecord, setSelectedRecord] = useState({
+    id: 'REC-PUNE-101',
+    khasraNumber: '142/3A',
+    khataNumber: '582',
+    ownerName: 'रमेश विठ्ठल पाटील (Ramesh Vitthal Patil)',
+    village: 'वाघोली (Wagholi)',
+    tehsil: 'हवेली (Haveli)',
+    district: 'पुणे (Pune)',
+    landArea: '1.45 हेक्टर (1.45 Hectare)',
+    ownershipType: 'भोगवटादार वर्ग - १ (Private / Class-1)',
+    status: 'VERIFIED',
+    encumbrance: 'बँक ऑफ महाराष्ट्र पीक कर्ज बोजा रु. ५०,०००/-',
+  })
   const [showPdfModal, setShowPdfModal] = useState(false)
-  const [activeTab, setActiveTab] = useState('search') // 'search' | 'mutation' | 'gis'
-
-  // Synthetic public records
-  const sampleRecords = [
-    {
-      id: 'REC-PUNE-101',
-      khasraNumber: '142/3A',
-      khataNumber: '582',
-      ownerName: 'रमेश विठ्ठल पाटील (Ramesh Vitthal Patil)',
-      village: 'वाघोली (Wagholi)',
-      tehsil: 'हवेली (Haveli)',
-      district: 'पुणे (Pune)',
-      landArea: '1.45 हेक्टर (1.45 Hectare)',
-      ownershipType: 'भोगवटादार वर्ग - १ (Private / Class-1)',
-      status: 'VERIFIED',
-      encumbrance: 'बँक ऑफ महाराष्ट्र पीक कर्ज बोजा रु. ५०,०००/-',
-    },
-    {
-      id: 'REC-PUNE-102',
-      khasraNumber: '88/1',
-      khataNumber: '314',
-      ownerName: 'सुनील निवृत्ती पवार (Sunil Nivrutti Pawar)',
-      village: 'बावधन (Bawdhan)',
-      tehsil: 'हवेली (Haveli)',
-      district: 'पुणे (Pune)',
-      landArea: '0.85 हेक्टर',
-      ownershipType: 'भोगवटादार वर्ग - १',
-      status: 'VERIFIED',
-      encumbrance: 'निरंक (No lien)',
-    },
-    {
-      id: 'REC-NASHIK-201',
-      khasraNumber: '215/B',
-      khataNumber: '941',
-      ownerName: 'गणेश तुकाराम देशमुख (Ganesh Tukaram Deshmukh)',
-      village: 'पंचवटी (Panchavati)',
-      tehsil: 'नाशिक (Nashik)',
-      district: 'नाशिक (Nashik)',
-      landArea: '2.10 हेक्टर',
-      ownershipType: 'भोगवटादार वर्ग - १',
-      status: 'VERIFIED',
-      encumbrance: 'एसबीआय शेती कर्ज बोजा',
-    },
-  ]
-
-  const handleSearch = (e) => {
-    e.preventDefault()
-    const match = sampleRecords.find(
-      (r) =>
-        r.khasraNumber.toLowerCase().includes(searchKhasra.trim().toLowerCase()) ||
-        r.khataNumber.includes(searchKhasra.trim())
-    )
-    setSelectedRecord(match || sampleRecords[0])
-  }
+  const [activeTab, setActiveTab] = useState('search') // 'search' | 'mutation'
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 pb-16">
@@ -76,13 +34,13 @@ export default function CitizenPortalPage() {
             <div className="inline-flex items-center gap-2 bg-amber-500/20 text-amber-300 border border-amber-400/40 rounded-full px-3 py-0.5 text-xs font-semibold uppercase mb-2">
               <span>🏛️ PUBLIC LAND RECORDS GATEWAY</span>
               <span>•</span>
-              <span>नागरिक सेवा पोर्टल</span>
+              <span>नागरिक अपलोड व पडताळणी पोर्टल</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              नागरिक भूमि अभिलेख सेवा (Citizen Land Record Portal)
+              नागरिक भूमि अभिलेख सेवा (Citizen Upload & Validation Portal)
             </h1>
             <p className="text-sm text-slate-200 mt-1 max-w-2xl font-light">
-              Search your 7/12 land extract, download QR-verified digital certificates in 22 languages, and track real-time mutation status.
+              Upload your 7/12 land extract document (PDF/JPG) for instant AI OCR verification, digital validation, and certified 22-language PDF download.
             </p>
           </div>
 
@@ -95,7 +53,7 @@ export default function CitizenPortalPage() {
                   : 'bg-slate-800 text-slate-200 border-slate-700 hover:border-slate-500'
               }`}
             >
-              🔍 ७/१२ शोध (Search 7/12)
+              📄 दस्तावेज अपलोड (Upload 7/12)
             </button>
             <button
               onClick={() => setActiveTab('mutation')}
@@ -114,70 +72,14 @@ export default function CitizenPortalPage() {
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 mt-8">
         {activeTab === 'search' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Search Form Card */}
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm h-fit">
-              <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2 border-b pb-3">
-                <span className="text-amber-600 text-xl">🔍</span>
-                <span>भूमी अभिलेख शोध (Search Record)</span>
-              </h2>
-
-              <form onSubmit={handleSearch} className="space-y-4 text-xs font-medium">
-                <div>
-                  <label className="block text-slate-700 font-semibold mb-1">जिल्हा (District)</label>
-                  <select
-                    value={searchDistrict}
-                    onChange={(e) => setSearchDistrict(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  >
-                    <option value="Pune">पुणे (Pune)</option>
-                    <option value="Nagpur">नागपूर (Nagpur)</option>
-                    <option value="Nashik">नाशिक (Nashik)</option>
-                    <option value="Thane">ठाणे (Thane)</option>
-                    <option value="Mumbai">मुंबई उपनगर (Mumbai)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-slate-700 font-semibold mb-1">तालुका (Tehsil)</label>
-                  <select
-                    value={searchTehsil}
-                    onChange={(e) => setSearchTehsil(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  >
-                    <option value="Haveli">हवेली (Haveli)</option>
-                    <option value="Pune City">पुणे शहर (Pune City)</option>
-                    <option value="Khed">खेड (Khed)</option>
-                    <option value="Shirur">शिरूर (Shirur)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-slate-700 font-semibold mb-1">
-                    गट क्रमांक किंवा खाते क्रमांक (Gat / Khasra No.)
-                  </label>
-                  <input
-                    type="text"
-                    value={searchKhasra}
-                    onChange={(e) => setSearchKhasra(e.target.value)}
-                    placeholder="उदा. 142/3A किंवा 582"
-                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    required
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-sm rounded shadow transition-all flex items-center justify-center gap-2 mt-2"
-                >
-                  <span>अभिलेख शोधा (Search Land Record)</span>
-                  <span>➔</span>
-                </button>
-              </form>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Upload Section (Left Column) */}
+            <div className="lg:col-span-6">
+              <UploadForm />
             </div>
 
             {/* Results & Certified Digital PDF Export Card */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-6 space-y-6">
               {selectedRecord ? (
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-4 mb-4">
