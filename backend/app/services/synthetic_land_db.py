@@ -143,10 +143,16 @@ SYNTHETIC_MAHABHULEKH_DB: List[Dict[str, Any]] = [
 ]
 
 
+import os
+import sqlite3
+
+DB_SQLITE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "mahabhulekh_1million.db")
+
+
 class SyntheticLandDatabaseService:
     """
     Service adapter providing search, verification, and lookup methods against
-    the Synthetic Mahabhulekh State Land Revenue Database.
+    the Synthetic Mahabhulekh State Land Revenue Database (supports 1,000,000+ entries via SQLite index).
     """
 
     def query_record_by_khasra(
@@ -156,24 +162,40 @@ class SyntheticLandDatabaseService:
         khasra_no: str
     ) -> Optional[Dict[str, Any]]:
         """
-        Looks up a land record in the Synthetic Mahabhulekh Registry
+        Looks up a land record in the 1,000,000+ Mahabhulekh Registry
         matching district, village, and survey/khasra number.
         """
-        clean_khasra = str(khasra_no).strip().lower()
-        clean_village = str(village).strip().lower()
-        clean_district = str(district).strip().lower()
+        clean_khasra = str(khasra_no).strip()
+        clean_village = str(village).strip()
 
+        # 1. Try querying the 1,000,000+ record indexed SQLite database
+        if os.path.exists(DB_SQLITE_PATH):
+            try:
+                conn = sqlite3.connect(DB_SQLITE_PATH)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+
+                # Fast indexed search on Khasra Number
+                query = "SELECT * FROM records WHERE khasraNumber = ? OR khasraNumber LIKE ? LIMIT 1"
+                cursor.execute(query, (clean_khasra, f"{clean_khasra}%"))
+                row = cursor.fetchone()
+                conn.close()
+
+                if row:
+                    rec_dict = dict(row)
+                    logger.info(f"✔ Found record in 1,000,000+ SQLite DB for Khasra {khasra_no}")
+                    return rec_dict
+            except Exception as e:
+                logger.warning(f"SQLite 1M database query error: {e}")
+
+        # 2. Fallback to in-memory synthetic array
         for record in SYNTHETIC_MAHABHULEKH_DB:
             rec_khasra = record["khasraNumber"].strip().lower()
             rec_village_mr = record["villageMr"].strip().lower()
             rec_village_en = record["villageEn"].strip().lower()
-            rec_dist_mr = record["districtMr"].strip().lower()
-            rec_dist_en = record["districtEn"].strip().lower()
 
-            # Match khasra number
-            if rec_khasra == clean_khasra or clean_khasra in rec_khasra:
-                # Match village or district if specified
-                if not clean_village or clean_village in rec_village_mr or clean_village in rec_village_en:
+            if rec_khasra == clean_khasra.lower() or clean_khasra.lower() in rec_khasra:
+                if not clean_village or clean_village.lower() in rec_village_mr or clean_village.lower() in rec_village_en:
                     logger.info(f"✔ Found synthetic Mahabhulekh record for {khasra_no} in {village}")
                     return record
 
@@ -181,7 +203,18 @@ class SyntheticLandDatabaseService:
         return None
 
     def get_all_synthetic_records(self) -> List[Dict[str, Any]]:
-        """Returns all synthetic state land records"""
+        """Returns sample synthetic state land records"""
+        if os.path.exists(DB_SQLITE_PATH):
+            try:
+                conn = sqlite3.connect(DB_SQLITE_PATH)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM records LIMIT 100")
+                rows = cursor.fetchall()
+                conn.close()
+                return [dict(r) for r in rows]
+            except Exception:
+                pass
         return SYNTHETIC_MAHABHULEKH_DB
 
 

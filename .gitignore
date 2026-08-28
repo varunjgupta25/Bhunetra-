@@ -56,3 +56,7 @@ htmlcov/
 
 # Exclude Word Specifications from repository
 *.docx
+
+# Large Local Datasets
+backend/app/data/*.db
+backend/app/data/*.csv
