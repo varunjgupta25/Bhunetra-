@@ -22,7 +22,7 @@ export function Navbar() {
   const lang = currentLanguage || 'mr'
   const currentRole = user?.role || 'officer'
 
-  const navItems = [
+  const allNavItems = [
     {
       label: t('dashboardTab', lang),
       path: '/dashboard',
@@ -55,6 +55,18 @@ export function Navbar() {
       roles: ['admin', 'verifier', 'officer', 'civilian'],
     },
   ]
+
+  // If unauthenticated: ONLY Explore tab is shown!
+  // If authenticated: Role-specific operational tabs are shown!
+  const navItems = isAuthenticated
+    ? allNavItems.filter((item) => item.roles.includes(currentRole))
+    : [
+        {
+          label: t('exploreTab', lang),
+          path: '/',
+          icon: 'explore',
+        },
+      ]
 
   return (
     <>

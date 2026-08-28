@@ -11,12 +11,17 @@ import VerificationPage from '@/pages/Verification'
 import RecordsPage from '@/pages/Records'
 import LoginPage from '@/pages/Login'
 
-function ProtectedRoute({ children, allowedRoles, redirectTo = '/citizen' }) {
-  const { user } = useAppStore()
-  const currentRole = user?.role || 'civilian'
+function ProtectedRoute({ children, allowedRoles }) {
+  const { user, isAuthenticated } = useAppStore()
 
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  const currentRole = user?.role || 'civilian'
   if (!allowedRoles.includes(currentRole)) {
-    return <Navigate to={redirectTo} replace />
+    const defaultHome = currentRole === 'civilian' ? '/citizen' : '/dashboard'
+    return <Navigate to={defaultHome} replace />
   }
 
   return children

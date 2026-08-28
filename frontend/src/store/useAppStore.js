@@ -24,9 +24,9 @@ export const useAppStore = create((set, get) => ({
   setLanguage: (langCode) => set({ currentLanguage: langCode }),
 
   // --- AUTH STATE ---
-  user: DEFAULT_USER,
-  isAuthenticated: true,
-  token: 'mock-jwt-token-bhunetra-2026',
+  user: null,
+  isAuthenticated: false,
+  token: null,
 
   login: async ({ email, password, role = 'officer' }) => {
     // Allows fast mock login + hook for Firebase signInWithEmailAndPassword
