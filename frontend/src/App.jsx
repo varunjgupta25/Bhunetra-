@@ -4,11 +4,23 @@ import { useAppStore } from '@/store/useAppStore'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
 import LandingPage from '@/pages/Landing'
+import CitizenPortalPage from '@/pages/CitizenPortal'
 import DashboardPage from '@/pages/Dashboard'
 import UploadPage from '@/pages/Upload'
 import VerificationPage from '@/pages/Verification'
 import RecordsPage from '@/pages/Records'
 import LoginPage from '@/pages/Login'
+
+function ProtectedRoute({ children, allowedRoles, redirectTo = '/citizen' }) {
+  const { user } = useAppStore()
+  const currentRole = user?.role || 'civilian'
+
+  if (!allowedRoles.includes(currentRole)) {
+    return <Navigate to={redirectTo} replace />
+  }
+
+  return children
+}
 
 export default function App() {
   const { theme } = useAppStore()
@@ -33,10 +45,32 @@ export default function App() {
         <div className="flex-1 flex flex-col">
           <Routes>
             <Route path="/" element={<LandingPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/citizen" element={<CitizenPortalPage />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['officer', 'verifier', 'admin']}>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/upload" element={<UploadPage />} />
-            <Route path="/verification" element={<VerificationPage />} />
+            <Route
+              path="/upload"
+              element={
+                <ProtectedRoute allowedRoles={['officer', 'admin']}>
+                  <UploadPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/verification"
+              element={
+                <ProtectedRoute allowedRoles={['verifier', 'admin']}>
+                  <VerificationPage />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/records" element={<RecordsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

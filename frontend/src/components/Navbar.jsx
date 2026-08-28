@@ -27,7 +27,13 @@ export function Navbar() {
       label: t('exploreTab', lang),
       path: '/',
       icon: 'explore',
-      roles: ['admin', 'verifier', 'officer'],
+      roles: ['admin', 'verifier', 'officer', 'civilian'],
+    },
+    {
+      label: t('citizenTab', lang),
+      path: '/citizen',
+      icon: 'account_balance',
+      roles: ['civilian', 'admin'],
     },
     {
       label: t('dashboardTab', lang),
@@ -52,7 +58,7 @@ export function Navbar() {
       label: t('gisTab', lang),
       path: '/records',
       icon: 'map',
-      roles: ['admin', 'verifier', 'officer'],
+      roles: ['admin', 'verifier', 'officer', 'civilian'],
     },
   ]
 
@@ -130,7 +136,7 @@ export function Navbar() {
                 {/* Role Switcher for Hackathon Demo */}
                 <div className="hidden lg:flex items-center gap-1 bg-[#0A1E3F] p-1 rounded border border-slate-600 text-xs">
                   <span className="px-1.5 text-[10px] font-semibold text-amber-400 uppercase">{t('roleTag', lang)}</span>
-                  {(['officer', 'verifier', 'admin']).map((r) => (
+                  {(['officer', 'verifier', 'admin', 'civilian']).map((r) => (
                     <button
                       key={r}
                       onClick={() => switchDemoRole(r)}
@@ -140,7 +146,13 @@ export function Navbar() {
                           : 'text-slate-300 hover:text-white'
                       }`}
                     >
-                      {r === 'officer' ? t('roleOfficer', lang) : r === 'verifier' ? t('roleVerifier', lang) : t('roleAdmin', lang)}
+                      {r === 'officer'
+                        ? t('roleOfficer', lang)
+                        : r === 'verifier'
+                        ? t('roleVerifier', lang)
+                        : r === 'admin'
+                        ? t('roleAdmin', lang)
+                        : t('roleCivilian', lang)}
                     </button>
                   ))}
                 </div>

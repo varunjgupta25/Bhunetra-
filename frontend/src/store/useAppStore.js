@@ -52,6 +52,13 @@ export const useAppStore = create((set, get) => ({
         role: 'officer',
         district: 'Pune',
       },
+      civilian: {
+        uid: 'civilian-001',
+        email: email || 'citizen.sharma@gmail.com',
+        displayName: 'Rajesh Sharma (नागरिक / Citizen)',
+        role: 'civilian',
+        district: 'Pune',
+      },
     }
 
     const selectedProfile = roleProfiles[role] || roleProfiles.officer
@@ -74,15 +81,16 @@ export const useAppStore = create((set, get) => ({
   switchDemoRole: (newRole) => {
     const { user } = get()
     if (!user) return
+    const names = {
+      admin: 'Varun Gupta (Admin)',
+      verifier: 'A. R. Shinde (Verifier)',
+      officer: 'K. S. Patil (Revenue Officer)',
+      civilian: 'Rajesh Sharma (नागरिक / Citizen)',
+    }
     const updatedUser = {
       ...user,
       role: newRole,
-      displayName:
-        newRole === 'admin'
-          ? 'Varun Gupta (Admin)'
-          : newRole === 'verifier'
-          ? 'A. R. Shinde (Verifier)'
-          : 'K. S. Patil (Revenue Officer)',
+      displayName: names[newRole] || 'K. S. Patil (Revenue Officer)',
     }
     set({ user: updatedUser })
   },
