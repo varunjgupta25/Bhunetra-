@@ -22,8 +22,24 @@ export default function CitizenPortalPage() {
     status: 'VERIFIED',
     encumbrance: 'बँक ऑफ महाराष्ट्र पीक कर्ज बोजा रु. ५०,०००/-',
   })
-  const [showPdfModal, setShowPdfModal] = useState(false)
-  const [activeTab, setActiveTab] = useState('search') // 'search' | 'mutation'
+  const handleUploadComplete = (extractedResult) => {
+    if (extractedResult && extractedResult.entities) {
+      const e = extractedResult.entities
+      setSelectedRecord({
+        id: extractedResult.docId || `REC-${Date.now()}`,
+        khasraNumber: e.khasra_no || e.survey_no || '142/3A',
+        khataNumber: e.khata_no || '582',
+        ownerName: e.owner_name || 'रमेश विठ्ठल पाटील (Ramesh Vitthal Patil)',
+        village: e.village || 'वाघोली (Wagholi)',
+        tehsil: e.tehsil || 'हवेली (Haveli)',
+        district: e.district || 'पुणे (Pune)',
+        landArea: e.area_ha ? `${e.area_ha} हेक्टर` : '1.45 हेक्टर',
+        ownershipType: e.ownership_type || 'भोगवटादार वर्ग - १',
+        status: extractedResult.status || 'VERIFIED',
+        encumbrance: e.liens || 'निरंक (No lien)',
+      })
+    }
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 pb-16">
@@ -75,7 +91,7 @@ export default function CitizenPortalPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Upload Section (Left Column) */}
             <div className="lg:col-span-6">
-              <UploadForm />
+              <UploadForm onComplete={handleUploadComplete} />
             </div>
 
             {/* Results & Certified Digital PDF Export Card */}
