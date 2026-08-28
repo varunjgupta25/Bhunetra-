@@ -286,7 +286,7 @@ export function UploadForm({ onComplete }) {
               type="file"
               className="hidden"
               accept=".pdf,.tiff,.tif,.jpg,.jpeg,.png"
-              onChange={handleFileInputChange}
+              onChange={handleFileSelect}
               disabled={isProcessing}
             />
 
