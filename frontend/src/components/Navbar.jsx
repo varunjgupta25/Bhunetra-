@@ -191,7 +191,7 @@ export function Navbar() {
                 className="bg-amber-400 hover:bg-amber-300 text-slate-950 px-4 py-1.5 rounded-md text-xs font-bold shadow-sm transition-colors flex items-center gap-1"
               >
                 <span className="material-symbols-outlined text-[16px]">lock</span>
-                <span>अधिकारी लॉगिन</span>
+                <span>{t('officerLoginBtn', lang)}</span>
               </Link>
             )}
           </div>

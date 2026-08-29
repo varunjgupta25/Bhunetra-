@@ -53,13 +53,13 @@ export default function CitizenPortalPage() {
             <div className="inline-flex items-center gap-2 bg-amber-500/20 text-amber-300 border border-amber-400/40 rounded-full px-3 py-0.5 text-xs font-semibold uppercase mb-2">
               <span>🏛️ PUBLIC LAND RECORDS GATEWAY</span>
               <span>•</span>
-              <span>नागरिक अपलोड व पडताळणी पोर्टल</span>
+              <span>{t('citizenBadge', lang)}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              नागरिक भूमि अभिलेख सेवा (Citizen Upload & Validation Portal)
+              {t('citizenPortalTitle', lang)}
             </h1>
             <p className="text-sm text-slate-200 mt-1 max-w-2xl font-light">
-              Upload your 7/12 land extract document (PDF/JPG) for instant AI OCR verification, digital validation, and certified 22-language PDF download.
+              {t('citizenPortalSubtitle', lang)}
             </p>
           </div>
 
@@ -72,7 +72,7 @@ export default function CitizenPortalPage() {
                   : 'bg-slate-800 text-slate-200 border-slate-700 hover:border-slate-500'
               }`}
             >
-              📄 दस्तावेज अपलोड (Upload 7/12)
+              {t('uploadDocTab', lang)}
             </button>
             <button
               onClick={() => setActiveTab('mutation')}
@@ -82,7 +82,7 @@ export default function CitizenPortalPage() {
                   : 'bg-slate-800 text-slate-200 border-slate-700 hover:border-slate-500'
               }`}
             >
-              📑 फेरफार स्थिती (Mutation Status)
+              {t('mutationStatusTab', lang)}
             </button>
           </div>
         </div>
@@ -104,10 +104,10 @@ export default function CitizenPortalPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-4 mb-4">
                     <div>
                       <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded border border-emerald-300 uppercase tracking-wider">
-                        ✔ VERIFIED STATE LAND RECORD
+                        {t('verifiedStateRecordBadge', lang)}
                       </span>
                       <h3 className="text-xl font-extrabold text-slate-900 mt-1">
-                        गट क्र. {selectedRecord.khasraNumber} — खाते क्र. {selectedRecord.khataNumber}
+                        {t('gatNoLabel', lang)} {selectedRecord.khasraNumber} — {t('khataNoLabel', lang)} {selectedRecord.khataNumber}
                       </h3>
                       <p className="text-xs text-slate-500">
                         {selectedRecord.village}, {selectedRecord.tehsil}, {selectedRecord.district}
@@ -118,29 +118,29 @@ export default function CitizenPortalPage() {
                       onClick={() => setShowPdfModal(true)}
                       className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2 border border-amber-300"
                     >
-                      <span>📜 प्रमाणपत्र डाउनलोड करा (Download Certified PDF)</span>
+                      <span>{t('downloadCertifiedPdfBtn', lang)}</span>
                     </button>
                   </div>
 
                   {/* Field Breakdown Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-medium">
                     <div className="p-3 bg-slate-50 rounded border border-slate-200">
-                      <span className="text-slate-500 text-[10px] block uppercase font-bold">खातेदाराचे नाव (Owner Name)</span>
+                      <span className="text-slate-500 text-[10px] block uppercase font-bold">{t('ownerNameLabel', lang)}</span>
                       <span className="text-sm font-bold text-slate-900 mt-0.5 block">{selectedRecord.ownerName}</span>
                     </div>
 
                     <div className="p-3 bg-slate-50 rounded border border-slate-200">
-                      <span className="text-slate-500 text-[10px] block uppercase font-bold">एकूण क्षेत्र (Land Area)</span>
+                      <span className="text-slate-500 text-[10px] block uppercase font-bold">{t('landAreaLabel', lang)}</span>
                       <span className="text-sm font-bold text-slate-900 mt-0.5 block">{selectedRecord.landArea}</span>
                     </div>
 
                     <div className="p-3 bg-slate-50 rounded border border-slate-200">
-                      <span className="text-slate-500 text-[10px] block uppercase font-bold">धारणा प्रकार (Ownership Type)</span>
+                      <span className="text-slate-500 text-[10px] block uppercase font-bold">{t('ownershipTypeLabel', lang)}</span>
                       <span className="text-sm font-bold text-slate-900 mt-0.5 block">{selectedRecord.ownershipType}</span>
                     </div>
 
                     <div className="p-3 bg-slate-50 rounded border border-slate-200">
-                      <span className="text-slate-500 text-[10px] block uppercase font-bold">इतर हक्क व कर्ज बोजा (Liens & Encumbrances)</span>
+                      <span className="text-slate-500 text-[10px] block uppercase font-bold">{t('liensLabel', lang)}</span>
                       <span className="text-xs font-bold text-amber-800 mt-0.5 block">{selectedRecord.encumbrance}</span>
                     </div>
                   </div>
@@ -149,17 +149,12 @@ export default function CitizenPortalPage() {
                   <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between text-xs text-blue-900 font-semibold">
                     <div className="flex items-center gap-2">
                       <span className="text-base">🛡️</span>
-                      <span>डिजिटल स्वाक्षरित ७/१२ — महाराष्ट्र शासन महसूल विभाग</span>
+                      <span>{t('digitallySignedGuarantee', lang)}</span>
                     </div>
                     <span className="text-[11px] font-mono text-blue-700 bg-blue-100 px-2 py-0.5 rounded">QR VERIFIED</span>
                   </div>
                 </div>
-              ) : (
-                <div className="bg-white p-12 rounded-xl border border-slate-200 text-center text-slate-500">
-                  <span className="text-4xl block mb-3">📜</span>
-                  <p className="text-sm font-semibold">गट क्रमांक टाकून तुमचा ७/१२ अभिलेख शोधा.</p>
-                </div>
-              )}
+              ) : null}
             </div>
           </div>
         )}
