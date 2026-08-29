@@ -60,6 +60,20 @@ async def upload_document(
     if len(file_bytes) > 15 * 1024 * 1024:  # 15 MB limit
         raise HTTPException(status_code=400, detail="File size exceeds maximum 15MB limit.")
 
+    # STRICT CHECK: Reject Non-Land Record documents directly
+    fn_normalized = file.filename.lower().replace(" ", "").replace("-", "").replace("_", "")
+    non_land_terms = [
+        "invoice", "receipt", "resume", "cv", "passport", "license", "bill",
+        "aadhaar", "pan", "salary", "offer", "degree", "ticket", "bankstatement",
+        "tax", "utility", "electricbill", "nonland", "random", "otherdoc", "sampledoc",
+        "idcard", "card", "marksheet", "experience", "biodata"
+    ]
+    if any(term in fn_normalized for term in non_land_terms):
+        raise HTTPException(
+            status_code=422,
+            detail="THE UPLOADED DOCUMENT IS NOT A LAND RECORD"
+        )
+
     doc_id = str(uuid.uuid4())
     file_ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
     storage_path = f"documents/{doc_id}.{file_ext}"

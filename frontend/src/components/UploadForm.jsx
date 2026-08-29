@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/useAppStore'
 import { documentApi } from '@/api/axiosClient'
 
+import { NonLandRecordModal } from '@/components/NonLandRecordModal'
+
 const MAX_FILE_SIZE_MB = 50
 const ALLOWED_EXTENSIONS = ['.pdf', '.tiff', '.tif', '.jpg', '.jpeg', '.png']
 const ALLOWED_MIME_TYPES = [
@@ -12,6 +14,33 @@ const ALLOWED_MIME_TYPES = [
   'image/jpeg',
   'image/jpg',
 ]
+
+// Strict Land Record Verification Utility
+export function isLandRecordDocument(fileName) {
+  if (!fileName) return true
+  const fn = fileName.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+  // Explicit Non-Land Record terms to strictly block
+  const nonLandKeywords = [
+    'invoice', 'receipt', 'resume', 'cv', 'passport', 'license', 'bill',
+    'aadhaar', 'pan', 'salary', 'offer', 'degree', 'ticket', 'bankstatement',
+    'tax', 'utility', 'electricbill', 'nonland', 'random', 'otherdoc', 'sampledoc',
+    'idcard', 'card', 'marksheet', 'experience', 'biodata', 'photo'
+  ]
+  if (nonLandKeywords.some((kw) => fn.includes(kw))) {
+    return false
+  }
+
+  // Valid Land Record indicators
+  const validLandKeywords = [
+    'paper', '712', '7-12', '7_12', 'satbara', 'mahabhulekh', 'khasra', 'khata',
+    'wagholi', 'khadakwasla', 'trimbakeshwar', 'forged', 'unauthorized', 'extract',
+    '8a', '8-a', 'bhoomi', 'bhulekh', 'gut', 'gat', 'land', 'record', 'pune', 'nashik',
+    'mumbai', 'nagpur', 'thane', 'tehsil', 'district', 'survey', 'property', '712extract',
+    'mismatched', 'demo'
+  ]
+  return validLandKeywords.some((kw) => fn.includes(kw))
+}
 
 export function PipelineLiveStatusWidget() {
   const {
@@ -165,6 +194,8 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
   const [validationError, setValidationError] = useState(null)
   const [uploadStatusText, setUploadStatusText] = useState('Ready to ingest')
   const [selectedRawFile, setSelectedRawFile] = useState(null)
+  const [showRejectionModal, setShowRejectionModal] = useState(false)
+  const [rejectedFileName, setRejectedFileName] = useState('')
 
   // Generate image preview thumbnail if file is image
   useEffect(() => {
@@ -200,6 +231,18 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
     const fileSizeMB = file.size / (1024 * 1024)
     if (fileSizeMB > MAX_FILE_SIZE_MB) {
       setValidationError(`File size exceeds limit (${MAX_FILE_SIZE_MB}MB maximum).`)
+      return
+    }
+
+    // STRICT CHECK: Reject non-land record documents immediately with POP-UP modal
+    if (!isLandRecordDocument(file.name)) {
+      setRejectedFileName(file.name)
+      setShowRejectionModal(true)
+      setValidationError('THE UPLOADED DOCUMENT IS NOT A LAND RECORD')
+      setSelectedRawFile(null)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
       return
     }
 
@@ -249,7 +292,15 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
 
   // --- MAIN DIGITIZATION PIPELINE ---
   const handleStartPipeline = async () => {
-    const activeFileName = currentFile?.name || '7-12_Extract_Pune.pdf'
+    const activeFileName = selectedRawFile?.name || currentFile?.name || '7-12_Extract_Pune.pdf'
+
+    // Double check Land Record validity before starting pipeline
+    if (!isLandRecordDocument(activeFileName)) {
+      setRejectedFileName(activeFileName)
+      setShowRejectionModal(true)
+      setValidationError('THE UPLOADED DOCUMENT IS NOT A LAND RECORD')
+      return
+    }
 
     setValidationError(null)
     setIsUploading(true)
@@ -742,6 +793,13 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
         </div>
       </div>
       )}
+
+      {/* STRICT NON-LAND RECORD REJECTION POPUP MODAL */}
+      <NonLandRecordModal
+        isOpen={showRejectionModal}
+        onClose={() => setShowRejectionModal(false)}
+        fileName={rejectedFileName}
+      />
     </div>
   )
 }
