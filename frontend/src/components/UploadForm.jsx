@@ -13,7 +13,127 @@ const ALLOWED_MIME_TYPES = [
   'image/jpg',
 ]
 
-export function UploadForm({ onComplete }) {
+export function PipelineLiveStatusWidget() {
+  const {
+    isProcessing,
+    processingStep,
+    uploadProgress,
+    uploadStatusText,
+  } = useAppStore()
+
+  return (
+    <div className="bg-surface-container-lowest rounded-[20px] p-card-padding card-shadow border border-[#D0E8F5] flex flex-col justify-between">
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-headline-md text-headline-md text-[#0D2B40]">
+            Pipeline Live Status
+          </h2>
+          <div
+            className={`flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium ${
+              isProcessing
+                ? 'bg-primary-container text-primary border border-primary/30'
+                : processingStep === 4
+                ? 'bg-success-container text-success border border-success/30'
+                : 'bg-surface-container-highest text-on-surface-variant'
+            }`}
+          >
+            {isProcessing ? (
+              <>
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+                </span>
+                <span>Processing</span>
+              </>
+            ) : processingStep === 4 ? (
+              <>
+                <span className="material-symbols-outlined text-sm">verified</span>
+                <span>Done</span>
+              </>
+            ) : (
+              <span>Active</span>
+            )}
+          </div>
+        </div>
+
+        <p className="text-sm text-on-surface-variant mb-6">{uploadStatusText || 'Ready to ingest'}</p>
+
+        {/* Overall Progress Indicator */}
+        <div className="mb-6 p-4 rounded-xl bg-[#F4F9FE] border border-[#D0E8F5]">
+          <div className="flex justify-between font-label-sm text-xs mb-2 text-on-surface">
+            <span className="font-semibold">Overall Progress</span>
+            <span className="font-bold text-primary">
+              {isProcessing
+                ? `${uploadProgress}%`
+                : processingStep === 4
+                ? '100%'
+                : '75%'}
+            </span>
+          </div>
+          <div className="w-full bg-surface-container-highest rounded-full h-3 overflow-hidden p-0.5 border border-outline-variant/30">
+            <div
+              className="progress-gradient h-2 rounded-full transition-all duration-300"
+              style={{
+                width: `${
+                  isProcessing ? uploadProgress : processingStep === 4 ? 100 : 75
+                }%`,
+              }}
+            ></div>
+          </div>
+        </div>
+
+        {/* Pipeline Step Visualizer */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+          {/* Step 1 */}
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs shrink-0">
+              ✓
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-900">Storage Ingestion</p>
+              <p className="text-[10px] text-slate-500">File encrypted</p>
+            </div>
+          </div>
+
+          {/* Step 2 */}
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs shrink-0">
+              ✓
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-900">Multilingual OCR</p>
+              <p className="text-[10px] text-slate-500">Marathi Extracted</p>
+            </div>
+          </div>
+
+          {/* Step 3 */}
+          <div className="p-3 bg-amber-50 rounded-xl border border-amber-300 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center font-bold text-xs shrink-0">
+              {processingStep === 3 && isProcessing ? '🔄' : '✓'}
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-900">LLM Structuring</p>
+              <p className="text-[10px] text-slate-600">Schema Mapping</p>
+            </div>
+          </div>
+
+          {/* Step 4 */}
+          <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-300 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+              ✓
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-900">Validation</p>
+              <p className="text-[10px] text-slate-600">Verified</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function UploadForm({ onComplete, hidePipeline = false }) {
   const navigate = useNavigate()
   const fileInputRef = useRef(null)
 
@@ -220,9 +340,9 @@ export function UploadForm({ onComplete }) {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+    <div className={hidePipeline ? "w-full" : "grid grid-cols-1 lg:grid-cols-12 gap-gutter"}>
       {/* Left Column: File Dropzone, Configuration & Action */}
-      <div className="lg:col-span-7 space-y-gutter">
+      <div className={hidePipeline ? "w-full space-y-gutter" : "lg:col-span-7 space-y-gutter"}>
         <div className="bg-surface-container-lowest rounded-[20px] p-card-padding card-shadow border border-[#D0E8F5]">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -451,7 +571,8 @@ export function UploadForm({ onComplete }) {
       </div>
 
       {/* Right Column: Processing Pipeline Status Widget */}
-      <div className="lg:col-span-5">
+      {!hidePipeline && (
+        <div className="lg:col-span-5">
         <div className="bg-surface-container-lowest rounded-[20px] p-card-padding card-shadow border border-[#D0E8F5] h-full flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4">
@@ -620,6 +741,7 @@ export function UploadForm({ onComplete }) {
           </div>
         </div>
       </div>
+      )}
     </div>
   )
 }

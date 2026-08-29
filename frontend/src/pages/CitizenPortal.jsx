@@ -3,7 +3,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { t } from '@/utils/languages'
 import { DigitizedPdfModal } from '@/components/DigitizedPdfModal'
 
-import { UploadForm } from '@/components/UploadForm'
+import { UploadForm, PipelineLiveStatusWidget } from '@/components/UploadForm'
 
 export default function CitizenPortalPage() {
   const { currentLanguage } = useAppStore()
@@ -92,12 +92,12 @@ export default function CitizenPortalPage() {
       <main className="max-w-7xl mx-auto px-4 mt-8">
         {activeTab === 'search' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Upload Section (Left Column) */}
+            {/* Upload Section (Left Column) - Extended Full Width */}
             <div className="lg:col-span-6">
-              <UploadForm onComplete={handleUploadComplete} />
+              <UploadForm onComplete={handleUploadComplete} hidePipeline={true} />
             </div>
 
-            {/* Results & Certified Digital PDF Export Card */}
+            {/* Results & Certified Digital PDF Export Card + Pipeline Below */}
             <div className="lg:col-span-6 space-y-6">
               {selectedRecord ? (
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative">
@@ -155,6 +155,9 @@ export default function CitizenPortalPage() {
                   </div>
                 </div>
               ) : null}
+
+              {/* Pipeline Live Status Widget placed directly BELOW the Gat No. card */}
+              <PipelineLiveStatusWidget />
             </div>
           </div>
         )}
