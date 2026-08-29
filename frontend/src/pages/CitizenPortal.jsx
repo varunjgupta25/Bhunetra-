@@ -32,10 +32,17 @@ export default function CitizenPortalPage() {
   const [activeTab, setActiveTab] = useState('search')
 
   const handleUploadComplete = (extractedResult, fileInfo) => {
-    const fileName = (fileInfo?.name || fileInfo?.fileName || '').toLowerCase()
+    const rawName = (fileInfo?.name || fileInfo?.fileName || '').toLowerCase()
+    const fileName = rawName.replace(/[^a-z0-9]/g, '')
 
     // 🚨 PAPER 4: FORGED / UNAUTHORIZED DEMO DOCUMENT DETECTED
-    if (fileName.includes('paper_4') || fileName.includes('unauthorized') || fileName.includes('forged') || fileName.includes('mismatched')) {
+    if (
+      fileName.includes('paper4') ||
+      fileName.includes('unauthorized') ||
+      fileName.includes('forged') ||
+      fileName.includes('mismatched') ||
+      fileName.includes('999')
+    ) {
       setSelectedRecord({
         id: 'REC-FORGED-999',
         khasraNumber: '999/X',
@@ -60,7 +67,7 @@ export default function CitizenPortalPage() {
     }
 
     // 📄 PAPER 2: KHADAKWASLA
-    if (fileName.includes('paper_2') || fileName.includes('khadakwasla')) {
+    if (fileName.includes('paper2') || fileName.includes('khadakwasla') || fileName.includes('248')) {
       setSelectedRecord({
         id: 'REC-PUNE-202',
         khasraNumber: '248',
@@ -85,7 +92,7 @@ export default function CitizenPortalPage() {
     }
 
     // 📄 PAPER 3: TRIMBAKESHWAR
-    if (fileName.includes('paper_3') || fileName.includes('trimbakeshwar')) {
+    if (fileName.includes('paper3') || fileName.includes('trimbakeshwar') || fileName.includes('trimbak') || fileName.includes('nashik') || fileName.includes('105')) {
       setSelectedRecord({
         id: 'REC-NASHIK-303',
         khasraNumber: '105/B',
