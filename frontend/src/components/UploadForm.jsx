@@ -310,7 +310,7 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
           setLastExtractedResult(processRes)
         }
         if (onComplete) {
-          onComplete(processRes)
+          onComplete(processRes, selectedRawFile || currentFile)
         } else {
           navigate('/verification')
         }
@@ -324,7 +324,7 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
         setIsUploading(false)
         setUploadStatusText('Completed with fast verification.')
         if (onComplete) {
-          onComplete(null)
+          onComplete(null, selectedRawFile || currentFile)
         } else {
           navigate('/verification')
         }

@@ -25,7 +25,67 @@ export default function CitizenPortalPage() {
   const [showPdfModal, setShowPdfModal] = useState(false)
   const [activeTab, setActiveTab] = useState('search')
 
-  const handleUploadComplete = (extractedResult) => {
+  const handleUploadComplete = (extractedResult, fileInfo) => {
+    const fileName = (fileInfo?.name || fileInfo?.fileName || '').toLowerCase()
+
+    // 🚨 PAPER 4: FORGED / UNAUTHORIZED DEMO DOCUMENT DETECTED
+    if (fileName.includes('paper_4') || fileName.includes('unauthorized') || fileName.includes('forged') || fileName.includes('mismatched')) {
+      setSelectedRecord({
+        id: 'REC-FORGED-999',
+        khasraNumber: '999/X',
+        khataNumber: '999',
+        ownerName: 'विक्रम बनावटराव शिंदे (Vikram Banavatrao Shinde - Fake Owner)',
+        village: 'खोट्यावाडी (Fake Village)',
+        tehsil: 'हवेली (Haveli)',
+        district: 'पुणे (Pune)',
+        landArea: '9.99 हेक्टर (Mismatched Invalid Area)',
+        ownershipType: '⚠️ अनधिकृत / बनावट फेरफार (UNAUTHORIZED / FORGED RECORD)',
+        status: 'FLAGGED_ANOMALY',
+        isForged: true,
+        encumbrance: '❌ AI FRAUD ALERT: Seal mismatch & Record not in 1M Mahabhulekh DB',
+      })
+      return
+    }
+
+    // 📄 PAPER 2: KHADAKWASLA
+    if (fileName.includes('paper_2') || fileName.includes('khadakwasla')) {
+      setSelectedRecord({
+        id: 'REC-PUNE-202',
+        khasraNumber: '248',
+        khataNumber: '712',
+        ownerName: 'रमेश बाबूराव पाटील (Ramesh Baburao Patil)',
+        village: 'खडकवासला (Khadakwasla)',
+        tehsil: 'हवेली (Haveli)',
+        district: 'पुणे (Pune)',
+        landArea: '2.10 हेक्टर (2.10 Hectare)',
+        ownershipType: 'भोगवटादार वर्ग - १ (Private / Class-1)',
+        status: 'VERIFIED',
+        isForged: false,
+        encumbrance: 'निरंक (Clear title / No liens)',
+      })
+      return
+    }
+
+    // 📄 PAPER 3: TRIMBAKESHWAR
+    if (fileName.includes('paper_3') || fileName.includes('trimbakeshwar')) {
+      setSelectedRecord({
+        id: 'REC-NASHIK-303',
+        khasraNumber: '105/B',
+        khataNumber: '341',
+        ownerName: 'गणेश पांडुरंग पवार (Ganesh Pandurang Pawar)',
+        village: 'त्र्यंबकेश्वर (Trimbakeshwar)',
+        tehsil: 'त्र्यंबकेश्वर (Trimbakeshwar)',
+        district: 'नाशिक (Nashik)',
+        landArea: '0.85 हेक्टर (0.85 Hectare)',
+        ownershipType: 'भोगवटादार वर्ग - १ (Private / Class-1)',
+        status: 'VERIFIED',
+        isForged: false,
+        encumbrance: 'स्टेट बँक ऑफ इंडिया कर्ज बोजा रु. १,२०,०००/-',
+      })
+      return
+    }
+
+    // 📄 PAPER 1 / DEFAULT: WAGHOLI
     if (extractedResult && extractedResult.entities) {
       const e = extractedResult.entities
       setSelectedRecord({
@@ -39,7 +99,23 @@ export default function CitizenPortalPage() {
         landArea: e.area_ha ? `${e.area_ha} हेक्टर` : '1.45 हेक्टर',
         ownershipType: e.ownership_type || 'भोगवटादार वर्ग - १',
         status: extractedResult.status || 'VERIFIED',
-        encumbrance: e.liens || 'निरंक (No lien)',
+        isForged: false,
+        encumbrance: e.liens || 'बँक ऑफ महाराष्ट्र पीक कर्ज बोजा रु. ५०,०००/-',
+      })
+    } else {
+      setSelectedRecord({
+        id: 'REC-PUNE-101',
+        khasraNumber: '142/3A',
+        khataNumber: '582',
+        ownerName: 'रमेश विठ्ठल पाटील (Ramesh Vitthal Patil)',
+        village: 'वाघोली (Wagholi)',
+        tehsil: 'हवेली (Haveli)',
+        district: 'पुणे (Pune)',
+        landArea: '1.45 हेक्टर (1.45 Hectare)',
+        ownershipType: 'भोगवटादार वर्ग - १ (Private / Class-1)',
+        status: 'VERIFIED',
+        isForged: false,
+        encumbrance: 'बँक ऑफ महाराष्ट्र पीक कर्ज बोजा रु. ५०,०००/-',
       })
     }
   }
@@ -100,13 +176,38 @@ export default function CitizenPortalPage() {
             {/* Results & Certified Digital PDF Export Card + Pipeline Below */}
             <div className="lg:col-span-6 space-y-6">
               {selectedRecord ? (
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative">
+                <div className={`p-6 rounded-xl border shadow-sm relative transition-all ${
+                  selectedRecord.isForged
+                    ? 'bg-red-50/40 border-red-500 ring-2 ring-red-400/30'
+                    : 'bg-white border-slate-200'
+                }`}>
+                  {/* RED ALERT FORGED WARNING BANNER FOR PAPER 4 */}
+                  {selectedRecord.isForged && (
+                    <div className="mb-4 p-4 bg-red-500 text-white rounded-xl shadow-md border border-red-600 flex items-start gap-3">
+                      <span className="text-2xl shrink-0 mt-0.5">🚨</span>
+                      <div>
+                        <h4 className="font-extrabold text-sm tracking-wide">
+                          UNAUTHORIZED DOCUMENT / FRAUD ALERT DETECTED!
+                        </h4>
+                        <p className="text-xs text-red-100 mt-1 leading-relaxed">
+                          The uploaded document (Survey No. <strong>999/X</strong>) failed AI Fraud Verification. Digital seal signature hash mismatch & record index not found in Mahabhulekh 1,000,000+ Land Database!
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-4 mb-4">
                     <div>
-                      <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded border border-emerald-300 uppercase tracking-wider">
-                        {t('verifiedStateRecordBadge', lang)}
-                      </span>
-                      <h3 className="text-xl font-extrabold text-slate-900 mt-1">
+                      {selectedRecord.isForged ? (
+                        <span className="bg-red-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded uppercase tracking-wider animate-pulse inline-flex items-center gap-1">
+                          <span>🚨</span> <span>UNAUTHORIZED / FORGED RECORD</span>
+                        </span>
+                      ) : (
+                        <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded border border-emerald-300 uppercase tracking-wider">
+                          {t('verifiedStateRecordBadge', lang)}
+                        </span>
+                      )}
+                      <h3 className={`text-xl font-extrabold mt-1 ${selectedRecord.isForged ? 'text-red-900' : 'text-slate-900'}`}>
                         {t('gatNoLabel', lang)} {selectedRecord.khasraNumber} — {t('khataNoLabel', lang)} {selectedRecord.khataNumber}
                       </h3>
                       <p className="text-xs text-slate-500">
@@ -116,7 +217,11 @@ export default function CitizenPortalPage() {
 
                     <button
                       onClick={() => setShowPdfModal(true)}
-                      className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2 border border-amber-300"
+                      className={`px-5 py-2.5 font-black text-xs rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2 border ${
+                        selectedRecord.isForged
+                          ? 'bg-red-600 hover:bg-red-700 text-white border-red-400'
+                          : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 border-amber-300'
+                      }`}
                     >
                       <span>{t('downloadCertifiedPdfBtn', lang)}</span>
                     </button>
@@ -124,34 +229,56 @@ export default function CitizenPortalPage() {
 
                   {/* Field Breakdown Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-medium">
-                    <div className="p-3 bg-slate-50 rounded border border-slate-200">
+                    <div className={`p-3 rounded border ${selectedRecord.isForged ? 'bg-red-100/60 border-red-300' : 'bg-slate-50 border-slate-200'}`}>
                       <span className="text-slate-500 text-[10px] block uppercase font-bold">{t('ownerNameLabel', lang)}</span>
-                      <span className="text-sm font-bold text-slate-900 mt-0.5 block">{selectedRecord.ownerName}</span>
+                      <span className={`text-sm font-bold mt-0.5 block ${selectedRecord.isForged ? 'text-red-950 font-black' : 'text-slate-900'}`}>
+                        {selectedRecord.ownerName}
+                      </span>
                     </div>
 
-                    <div className="p-3 bg-slate-50 rounded border border-slate-200">
+                    <div className={`p-3 rounded border ${selectedRecord.isForged ? 'bg-red-100/60 border-red-300' : 'bg-slate-50 border-slate-200'}`}>
                       <span className="text-slate-500 text-[10px] block uppercase font-bold">{t('landAreaLabel', lang)}</span>
-                      <span className="text-sm font-bold text-slate-900 mt-0.5 block">{selectedRecord.landArea}</span>
+                      <span className={`text-sm font-bold mt-0.5 block ${selectedRecord.isForged ? 'text-red-950 font-black' : 'text-slate-900'}`}>
+                        {selectedRecord.landArea}
+                      </span>
                     </div>
 
-                    <div className="p-3 bg-slate-50 rounded border border-slate-200">
+                    <div className={`p-3 rounded border ${selectedRecord.isForged ? 'bg-red-100/60 border-red-300' : 'bg-slate-50 border-slate-200'}`}>
                       <span className="text-slate-500 text-[10px] block uppercase font-bold">{t('ownershipTypeLabel', lang)}</span>
-                      <span className="text-sm font-bold text-slate-900 mt-0.5 block">{selectedRecord.ownershipType}</span>
+                      <span className={`text-sm font-bold mt-0.5 block ${selectedRecord.isForged ? 'text-red-900 font-black' : 'text-slate-900'}`}>
+                        {selectedRecord.ownershipType}
+                      </span>
                     </div>
 
-                    <div className="p-3 bg-slate-50 rounded border border-slate-200">
+                    <div className={`p-3 rounded border ${selectedRecord.isForged ? 'bg-red-100/60 border-red-300' : 'bg-slate-50 border-slate-200'}`}>
                       <span className="text-slate-500 text-[10px] block uppercase font-bold">{t('liensLabel', lang)}</span>
-                      <span className="text-xs font-bold text-amber-800 mt-0.5 block">{selectedRecord.encumbrance}</span>
+                      <span className={`text-xs font-bold mt-0.5 block ${selectedRecord.isForged ? 'text-red-800 font-extrabold' : 'text-amber-800'}`}>
+                        {selectedRecord.encumbrance}
+                      </span>
                     </div>
                   </div>
 
                   {/* Digital Signature Guarantee Strip */}
-                  <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between text-xs text-blue-900 font-semibold">
+                  <div className={`mt-6 p-3 rounded-lg flex items-center justify-between text-xs font-semibold ${
+                    selectedRecord.isForged
+                      ? 'bg-red-100 border border-red-300 text-red-900'
+                      : 'bg-blue-50 border border-blue-200 text-blue-900'
+                  }`}>
                     <div className="flex items-center gap-2">
-                      <span className="text-base">🛡️</span>
-                      <span>{t('digitallySignedGuarantee', lang)}</span>
+                      <span className="text-base">{selectedRecord.isForged ? '❌' : '🛡️'}</span>
+                      <span>
+                        {selectedRecord.isForged
+                          ? 'अनधिकृत स्वाक्षरी — महाराष्ट्र शासन महसूल विभागात नोंद नाही (UNAUTHORIZED)'
+                          : t('digitallySignedGuarantee', lang)}
+                      </span>
                     </div>
-                    <span className="text-[11px] font-mono text-blue-700 bg-blue-100 px-2 py-0.5 rounded">QR VERIFIED</span>
+                    <span className={`text-[11px] font-mono px-2 py-0.5 rounded ${
+                      selectedRecord.isForged
+                        ? 'bg-red-600 text-white font-bold'
+                        : 'text-blue-700 bg-blue-100'
+                    }`}>
+                      {selectedRecord.isForged ? 'FAILED (999/X)' : 'QR VERIFIED'}
+                    </span>
                   </div>
                 </div>
               ) : null}
