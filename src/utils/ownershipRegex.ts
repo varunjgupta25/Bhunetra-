@@ -25,63 +25,93 @@ export interface OwnershipExtractionResult {
 }
 
 /**
- * 1. LAND RECORDS PATTERNS (7/12, RoR, Khatauni, Jamabandi, Bhulekh)
- * Matches English & Devanagari (Hindi/Marathi) tenure & holding headers and values.
+ * 1. LAND RECORDS PATTERNS (Maharashtra 7/12, MLRC 1966, RoR, Khatauni, Jamabandi)
+ * Fully covers Maharashtra statutory occupant classes and All-India revenue tenures.
+ * Uses Unicode-aware boundary lookarounds to prevent false positives and ASCII \b failures on Devanagari.
  */
 export const LAND_RECORD_PATTERNS: PatternRule[] = [
+  // --- Maharashtra 7/12 Specific: Occupant Class 1 (Bhogwatadar Varg-1: Alienable / Freehold Private) ---
   {
-    key: 'PRIVATE_INDIVIDUAL',
-    label: 'Private / Sole Individual Owner',
-    regex: /(?:धारणाधिकार\s*प्रकार|खातेदाराचे\s*प्रकार|कब्जेदार\s*प्रकार|भूमि\s*स्वामी|ownership\s*type|land\s*holding\s*type|tenure\s*type)\s*[:\-]?\s*(निजी|व्यक्तिगत|खुद|स्वयं|private|individual|sole\s*owner|bhumidhar)/i,
-    confidence: 0.95,
+    key: 'OCCUPANT_CLASS_1',
+    label: 'भोगवटादार वर्ग - १ (Occupant Class-1 / Freehold Private)',
+    regex: /(?:धारणा\s*प्रकार|धारणाधिकार\s*प्रकार|भोगवटा\s*प्रकार|भोगवटादाराचा\s*वर्ग|खातेदार(?:ाचे)?\s*प्रकार|कब्जेदार\s*प्रकार|भूमि\s*स्वामी|हक्काचा\s*प्रकार|ownership\s*type|tenure\s*type|occupant\s*class)\s*[:\-]?\s*(भोगवटादार\s*वर्ग\s*[-–]?\s*[१1]|वर्ग\s*[-–]?\s*[१1]|occupant\s*class\s*[-–]?\s*1|class\s*[-–]?\s*1|भूमि\s*स्वामी|निजी|व्यक्तिगत|खुद|स्वयं|private|individual|sole\s*owner|bhumidhar)/iu,
+    confidence: 0.98,
   },
   {
-    key: 'PRIVATE_INDIVIDUAL',
-    label: 'Private / Sole Individual Owner (Inline)',
-    regex: /\b(निजी|व्यक्तिगत|स्वयं\s*अधिकृत|bhumidhar\s*with\s*transferable\s*rights|sole\s*proprietorship\s*land|private\s*ownership)\b/i,
-    confidence: 0.85,
+    key: 'OCCUPANT_CLASS_1',
+    label: 'भोगवटादार वर्ग - १ (Occupant Class-1 / Freehold Private)',
+    regex: /(?<![\p{L}\p{N}])(भोगवटादार\s*वर्ग\s*[-–]?\s*[१1]|भोगवटादार\s*वर्ग\s*१|वर्ग\s*[-–]?\s*[१1]|occupant\s*class\s*[-–]?\s*1|bhumidhar\s*with\s*transferable\s*rights|sole\s*proprietorship\s*land|private\s*ownership)(?![\p{L}\p{N}])/iu,
+    confidence: 0.88,
+  },
+
+  // --- Maharashtra 7/12 Specific: Occupant Class 2 (Bhogwatadar Varg-2: Inalienable / Restricted Govt Grant) ---
+  {
+    key: 'OCCUPANT_CLASS_2',
+    label: 'भोगवटादार वर्ग - २ (Occupant Class-2 / Restricted Tenure)',
+    regex: /(?:धारणा\s*प्रकार|धारणाधिकार\s*प्रकार|भोगवटा\s*प्रकार|भोगवटादाराचा\s*वर्ग|हक्काचा\s*प्रकार|ownership\s*type|tenure\s*type|occupant\s*class)\s*[:\-]?\s*(भोगवटादार\s*वर्ग\s*[-–]?\s*[२2]|वर्ग\s*[-–]?\s*[२2]|occupant\s*class\s*[-–]?\s*2|class\s*[-–]?\s*2|प्रतिबंधित\s*सत्ताप्रकार|restricted\s*tenure|inalienable)/iu,
+    confidence: 0.98,
   },
   {
-    key: 'JOINT_COOWNERSHIP',
-    label: 'Joint / Co-Shareholding',
-    regex: /(?:धारणाधिकार\s*प्रकार|खातेदाराचे\s*प्रकार|कब्जेदार\s*प्रकार|ownership\s*type|tenure\s*type)\s*[:\-]?\s*(सह-खातेदार|संयुक्त|साझा|सहयोगी|joint|co-owner|co-sharer|multiple\s*owners)/i,
-    confidence: 0.95,
+    key: 'OCCUPANT_CLASS_2',
+    label: 'भोगवटादार वर्ग - २ (Occupant Class-2 / Restricted Tenure)',
+    regex: /(?<![\p{L}\p{N}])(भोगवटादार\s*वर्ग\s*[-–]?\s*[२2]|भोगवटादार\s*वर्ग\s*२|वर्ग\s*[-–]?\s*[२2]|occupant\s*class\s*[-–]?\s*2|प्रतिबंधित\s*सत्ताप्रकार|restricted\s*tenure)(?![\p{L}\p{N}])/iu,
+    confidence: 0.88,
   },
+
+  // --- Government / State / Public Land / Govt Lessee (MLRC Sec 38) ---
   {
-    key: 'JOINT_COOWNERSHIP',
-    label: 'Joint / Co-Shareholding (Inline)',
-    regex: /\b(सह-खातेदार|संयुक्त\s*खाता|साझेदारी\s*भूमि|joint\s*holding|co-shared|joint\s*khatadar)\b/i,
-    confidence: 0.85,
+    key: 'GOVERNMENT_STATE',
+    label: 'शासकीय / सरकारी जमीन (Government Land / Lessee)',
+    regex: /(?:धारणा\s*प्रकार|धारणाधिकार\s*प्रकार|भोगवटा\s*प्रकार|भोगवटादाराचा\s*वर्ग|ownership\s*type|land\s*type)\s*[:\-]?\s*(शासकीय\s*पट्टेदार|सरकारी\s*पट्टेदार|सरकारी\s*जमीन|शासकीय\s*जमीन|राज्य\s*सरकार|ग्राम\s*पंचायत|आबादी|government\s*lessee|state\s*govt|public\s*land|gram\s*sabha)/iu,
+    confidence: 0.96,
   },
   {
     key: 'GOVERNMENT_STATE',
-    label: 'Government / State / Public Land',
-    regex: /(?:धारणाधिकार\s*प्रकार|खातेदाराचे\s*प्रकार|ownership\s*type|land\s*type)\s*[:\-]?\s*(सरकारी|शासकीय|राज्य\s*सरकार|ग्राम\s*पंचायत|आबादी|government|state\s*govt|public|gram\s*sabha)/i,
+    label: 'शासकीय / सरकारी जमीन (Government Land / Lessee)',
+    regex: /(?<![\p{L}\p{N}])(शासकीय\s*पट्टेदार|सरकारी\s*पट्टेदार|सरकारी\s*जमीन|शासकीय\s*जमीन|ग्राम\s*पंचायत\s*भूमि|state\s*government\s*land|government\s*lessee|gram\s*sabha\s*property)(?![\p{L}\p{N}])/iu,
+    confidence: 0.86,
+  },
+
+  // --- Joint / Co-ownership Holding ---
+  {
+    key: 'JOINT_COOWNERSHIP',
+    label: 'संयुक्त / सह-खातेदार (Joint / Co-Shareholding)',
+    regex: /(?:धारणा\s*प्रकार|धारणाधिकार\s*प्रकार|खातेदाराचे\s*प्रकार|कब्जेदार\s*प्रकार|ownership\s*type|tenure\s*type)\s*[:\-]?\s*(सह-खातेदार|संयुक्त|साझा|सहयोगी|सामाईक|joint|co-owner|co-sharer|multiple\s*owners)/iu,
     confidence: 0.95,
   },
   {
-    key: 'GOVERNMENT_STATE',
-    label: 'Government / State / Public Land (Inline)',
-    regex: /\b(सरकारी\s*भूमि|शासकीय\s*जमीन|ग्राम\s*पंचायत\s*भूमि|state\s*government\s*land|gram\s*sabha\s*property)\b/i,
+    key: 'JOINT_COOWNERSHIP',
+    label: 'संयुक्त / सह-खातेदार (Joint / Co-Shareholding)',
+    regex: /(?<![\p{L}\p{N}])(सह-खातेदार|संयुक्त\s*खाता|साझेदारी\s*भूमि|सामाईक\s*जमीन|joint\s*holding|co-shared|joint\s*khatadar)(?![\p{L}\p{N}])/iu,
     confidence: 0.85,
   },
+
+  // --- Protected Tenant / Leasehold / Mortgage ---
   {
     key: 'LEASEHOLD_TENANT',
-    label: 'Leasehold / Tenant / Mortgage',
-    regex: /(?:धारणाधिकार\s*प्रकार|खातेदाराचे\s*प्रकार|ownership\s*type|tenure)\s*[:\-]?\s*(पट्टा|लीज|किरायेदार|असामी|बंधक|leasehold|tenant|lessee|mortgaged)/i,
+    label: 'पट्टा / कुळ वहिवाट (Protected Tenant / Leasehold)',
+    regex: /(?:धारणा\s*प्रकार|धारणाधिकार\s*प्रकार|खातेदाराचे\s*प्रकार|ownership\s*type|tenure)\s*[:\-]?\s*(कुळ|संरक्षित\s*कुळ|पट्टा|लीज|किरायेदार|असामी|बंधक|tenant|protected\s*tenant|leasehold|lessee|mortgaged)/iu,
     confidence: 0.95,
   },
   {
     key: 'LEASEHOLD_TENANT',
-    label: 'Leasehold / Tenant (Inline)',
-    regex: /\b(पट्टाधारी|लीज\s*पर|किराया\s*अनुबंध|leasehold\s*tenure|government\s*lease)\b/i,
+    label: 'पट्टा / कुळ वहिवाट (Protected Tenant / Leasehold)',
+    regex: /(?<![\p{L}\p{N}])(संरक्षित\s*कुळ|कुळ\s*वहिवाट|पट्टाधारी|लीज\s*पर|किराया\s*अनुबंध|leasehold\s*tenure|government\s*lease)(?![\p{L}\p{N}])/iu,
     confidence: 0.85,
+  },
+
+  // --- Trust / Temple / Devasthan Inam Land ---
+  {
+    key: 'TRUST_INSTITUTIONAL',
+    label: 'देवस्थान / इनाम / संस्था (Devasthan / Trust Land)',
+    regex: /(?:धारणा\s*प्रकार|धारणाधिकार\s*प्रकार|जमिनीचा\s*प्रकार|ownership\s*type)\s*[:\-]?\s*(देवस्थान\s*इनाम|इनाम\s*जमीन|ट्रस्ट|संस्था|मंदिर|देवस्थान|समीति|devasthan|inam\s*land|trust|society|institutional|temple\s*land)/iu,
+    confidence: 0.95,
   },
   {
     key: 'TRUST_INSTITUTIONAL',
-    label: 'Trust / Society / Institutional Land',
-    regex: /(?:धारणाधिकार\s*प्रकार|ownership\s*type)\s*[:\-]?\s*(ट्रस्ट|संस्था|मंदिर|देवस्थान|समीति|trust|society|institutional|temple\s*land)/i,
-    confidence: 0.95,
+    label: 'देवस्थान / इनाम / संस्था (Devasthan / Trust Land)',
+    regex: /(?<![\p{L}\p{N}])(देवस्थान\s*इनाम|इनाम\s*जमीन|देवस्थान\s*ट्रस्ट|temple\s*land|trust\s*property)(?![\p{L}\p{N}])/iu,
+    confidence: 0.85,
   },
 ];
 
@@ -99,43 +129,43 @@ export const BUSINESS_CERT_PATTERNS: PatternRule[] = [
   {
     key: 'PROPRIETORSHIP',
     label: 'Proprietorship (Inline)',
-    regex: /\b(sole\s*proprietorship|proprietorship\s*firm|एकल\s*स्वामित्व)\b/i,
+    regex: /(?<![\p{L}\p{N}])(sole\s*proprietorship|proprietorship\s*firm|एकल\s*स्वामित्व)(?![\p{L}\p{N}])/iu,
     confidence: 0.85,
   },
   {
     key: 'PARTNERSHIP',
     label: 'Partnership Firm',
-    regex: /(?:constitution\s*of\s*business|entity\s*type|ownership)\s*[:\-]?\s*(partnership|partnership\s*firm|साझेदारी|साझेदारी\s*फर्म)/i,
+    regex: /(?:constitution\s*of\s*business|entity\s*type|ownership)\s*[:\-]?\s*(partnership|partnership\s*firm|साझेदारी|साझेदारी\s*फर्म)/iu,
     confidence: 0.95,
   },
   {
     key: 'PRIVATE_LIMITED',
     label: 'Private Limited Company',
-    regex: /(?:constitution\s*of\s*business|entity\s*type)\s*[:\-]?\s*(private\s*limited|pvt\s*ltd|pvt\.\s*ltd\.|पी०\s*वी०\s*टी०)/i,
+    regex: /(?:constitution\s*of\s*business|entity\s*type)\s*[:\-]?\s*(private\s*limited|pvt\s*ltd|pvt\.\s*ltd\.|पी०\s*वी०\s*टी०)/iu,
     confidence: 0.95,
   },
   {
     key: 'PUBLIC_LIMITED',
     label: 'Public Limited Company',
-    regex: /(?:constitution\s*of\s*business|entity\s*type)\s*[:\-]?\s*(public\s*limited|public\s*ltd)/i,
+    regex: /(?:constitution\s*of\s*business|entity\s*type)\s*[:\-]?\s*(public\s*limited|public\s*ltd)/iu,
     confidence: 0.95,
   },
   {
     key: 'LLP',
     label: 'Limited Liability Partnership (LLP)',
-    regex: /(?:constitution\s*of\s*business|entity\s*type)\s*[:\-]?\s*(limited\s*liability\s*partnership|llp|एलएलपी)/i,
+    regex: /(?:constitution\s*of\s*business|entity\s*type)\s*[:\-]?\s*(limited\s*liability\s*partnership|llp|एलएलपी)/iu,
     confidence: 0.95,
   },
   {
     key: 'HUF',
     label: 'Hindu Undivided Family (HUF)',
-    regex: /(?:constitution\s*of\s*business|entity\s*type)\s*[:\-]?\s*(hindu\s*undivided\s*family|huf|हिन्दू\s*अविभक्त\s*कुटुंब)/i,
+    regex: /(?:constitution\s*of\s*business|entity\s*type)\s*[:\-]?\s*(hindu\s*undivided\s*family|huf|हिन्दू\s*अविभक्त\s*कुटुंब)/iu,
     confidence: 0.95,
   },
   {
     key: 'SOCIETY_TRUST',
     label: 'Society / Trust / Co-operative',
-    regex: /(?:constitution\s*of\s*business|entity\s*type)\s*[:\-]?\s*(society|trust|cooperative|co-operative|समीति|ट्रस्ट)/i,
+    regex: /(?:constitution\s*of\s*business|entity\s*type)\s*[:\-]?\s*(society|trust|cooperative|co-operative|समीति|ट्रस्ट)/iu,
     confidence: 0.95,
   },
 ];
@@ -147,25 +177,25 @@ export const PROPERTY_DEED_PATTERNS: PatternRule[] = [
   {
     key: 'FREEHOLD',
     label: 'Freehold Title',
-    regex: /(?:nature\s*of\s*title|ownership\s*status|deed\s*type)\s*[:\-]?\s*(freehold|free-hold|पूर्ण\s*स्वामित्व)/i,
+    regex: /(?:nature\s*of\s*title|ownership\s*status|deed\s*type)\s*[:\-]?\s*(freehold|free-hold|पूर्ण\s*स्वामित्व)/iu,
     confidence: 0.95,
   },
   {
     key: 'FREEHOLD',
     label: 'Freehold Title (Inline)',
-    regex: /\b(freehold\s*property|freehold\s*land|पूर्ण\s*स्वामित्वाधीन)\b/i,
+    regex: /(?<![\p{L}\p{N}])(freehold\s*property|freehold\s*land|पूर्ण\s*स्वामित्वाधीन)(?![\p{L}\p{N}])/iu,
     confidence: 0.85,
   },
   {
     key: 'LEASEHOLD',
     label: 'Leasehold Property',
-    regex: /(?:nature\s*of\s*title|ownership\s*status)\s*[:\-]?\s*(leasehold|lease-hold|पट्टागत|पट्टा\s*विलेख)/i,
+    regex: /(?:nature\s*of\s*title|ownership\s*status)\s*[:\-]?\s*(leasehold|lease-hold|पट्टागत|पट्टा\s*विलेख)/iu,
     confidence: 0.95,
   },
   {
     key: 'POWER_OF_ATTORNEY',
     label: 'Power of Attorney Holder',
-    regex: /(?:nature\s*of\s*title|ownership\s*by)\s*[:\-]?\s*(power\s*of\s*attorney|poa|मुख्तारनामा|जीपीए)/i,
+    regex: /(?:nature\s*of\s*title|ownership\s*by)\s*[:\-]?\s*(power\s*of\s*attorney|poa|मुख्तारनामा|जीपीए)/iu,
     confidence: 0.95,
   },
 ];
@@ -177,25 +207,25 @@ export const UDYAM_MSME_PATTERNS: PatternRule[] = [
   {
     key: 'PROPRIETARY',
     label: 'Proprietary MSME',
-    regex: /(?:type\s*of\s*enterprise|organisation\s*type)\s*[:\-]?\s*(proprietary|proprietorship)/i,
+    regex: /(?:type\s*of\s*enterprise|organisation\s*type)\s*[:\-]?\s*(proprietary|proprietorship)/iu,
     confidence: 0.95,
   },
   {
     key: 'PARTNERSHIP',
     label: 'Partnership MSME',
-    regex: /(?:type\s*of\s*enterprise|organisation\s*type)\s*[:\-]?\s*(partnership)/i,
+    regex: /(?:type\s*of\s*enterprise|organisation\s*type)\s*[:\-]?\s*(partnership)/iu,
     confidence: 0.95,
   },
   {
     key: 'SELF_HELP_GROUP',
     label: 'Self Help Group (SHG)',
-    regex: /(?:type\s*of\s*enterprise|organisation\s*type)\s*[:\-]?\s*(self\s*help\s*group|shg|स्वयं\s*सहायता\s*समूह)/i,
+    regex: /(?:type\s*of\s*enterprise|organisation\s*type)\s*[:\-]?\s*(self\s*help\s*group|shg|स्वयं\s*सहायता\s*समूह)/iu,
     confidence: 0.95,
   },
   {
     key: 'COOPERATIVE',
     label: 'Co-operative Society',
-    regex: /(?:type\s*of\s*enterprise|organisation\s*type)\s*[:\-]?\s*(co-operative|cooperative|सहकारी\s*समिति)/i,
+    regex: /(?:type\s*of\s*enterprise|organisation\s*type)\s*[:\-]?\s*(co-operative|cooperative|सहकारी\s*समिति)/iu,
     confidence: 0.95,
   },
 ];

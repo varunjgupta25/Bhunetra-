@@ -218,8 +218,9 @@ async def execute_processing_pipeline(doc_id: str, file_bytes: bytes, user_uid: 
 
         # 1. OCR Extraction (Bhashini API wrapper with resilient fallback)
         ocr_result = await ocr_service.extract_text(file_bytes, source_language="mr")
+        raw_text = ocr_result.raw_text  # Assign raw OCR text for downstream pipeline stages
 
-        # 2. Extract structured fields with dedicated XGBoost ML Engine (100% Offline & Sovereign)
+        # 2. Extract structured fields with dedicated ML Structuring Engine (100% Offline & Sovereign)
         extracted, ml_scores = ml_structuring_engine.extract_fields(
             raw_text, ocr_is_fallback=getattr(ocr_result, "is_fallback", False)
         )
@@ -289,11 +290,11 @@ async def execute_processing_pipeline(doc_id: str, file_bytes: bytes, user_uid: 
             }
             db.collection("verificationQueue").document(queue_id).set(queue_data)
 
-        # 7. Update document status to PROCESSED
+        # 7. Update document status to PROCESSED (use extracted geographic fields)
         db.collection("documents").document(doc_id).update({
             "status": DocumentStatus.PROCESSED.value,
-            "district": district,
-            "village": village,
+            "district": extracted.district,
+            "village": extracted.village,
             "recordId": record_id
         })
 

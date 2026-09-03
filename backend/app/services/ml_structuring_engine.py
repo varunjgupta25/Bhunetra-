@@ -125,9 +125,10 @@ class LandStructuringEngine:
         }
 
         # 1. Khasra / Survey Number — anchored match first, unanchored fallback second
+        # Note: Must match भूमापन क्रमांक, गट क्रमांक, सर्वे नंबर, while ignoring document title "गाव नमुना सात (७/१२)"
         khasra_match = re.search(
-            r"(?:गट\s*क्र(?:मांक|\.)?|सर्वे\s*नं(?:बर|\.)?|7/12|७/१२)\s*[:\-]?\s*([\d\w/अ-झा-ै]+)",
-            text, re.UNICODE
+            r"(?:भूमापन\s*क्र(?:मांक|\.)?|गट\s*क्र(?:मांक|\.)?|सर्वे\s*नं(?:बर|\.)?|khasra\s*no|survey\s*no)(?:[^:\n\d]*[:\-])?\s*([\d]+[/\w\-\u0900-\u097F]*)",
+            text, re.UNICODE | re.IGNORECASE
         )
         if khasra_match:
             khasra = khasra_match.group(1).strip()
@@ -135,15 +136,15 @@ class LandStructuringEngine:
             confidence_scores["khasraNumber"] = self._band_confidence(True, feats.digit_ratio + (0.3 if feats.has_slash else 0))
         else:
             khasra_fallback = re.search(r"(\b\d{1,4}\s*/\s*[\d\wA-Za-z\u0900-\u097F]+\b)", text)
-            if khasra_fallback:
+            if khasra_fallback and "7/12" not in khasra_fallback.group(1) and "७/१२" not in khasra_fallback.group(1):
                 khasra = khasra_fallback.group(1).strip()
                 feats = self.extract_features(khasra, text)
                 confidence_scores["khasraNumber"] = self._band_confidence(False, feats.digit_ratio)
 
         # 2. Khata / Account Number
         khata_match = re.search(
-            r"(?:खाते\s*क्र(?:मांक|\.)?|खाता\s*नं(?:बर|\.)?)\s*[:\-]?\s*(\d{1,6})",
-            text, re.UNICODE
+            r"(?:खाते\s*क्र(?:मांक|\.)?|खाता\s*नं(?:बर|\.)?|khata\s*no)\s*[:\-]?\s*(\d{1,6})",
+            text, re.UNICODE | re.IGNORECASE
         )
         if khata_match:
             khata = khata_match.group(1).strip()
@@ -151,11 +152,11 @@ class LandStructuringEngine:
 
         # 3. Owner Name
         owner_match = re.search(
-            r"(?:खातेदाराचे\s*नाव|भोगवटादार|नाव)\s*[:\-]?\s*([\u0900-\u097F \.]{4,40})",
-            text, re.UNICODE
+            r"(?:खातेदाराचे\s*नाव|भोगवटादाराचे\s*नाव|भोगवटादार|जमीन\s*मालकाचे\s*नाव)\s*[:\-]?\s*([^\n,:]{4,50})",
+            text, re.UNICODE | re.IGNORECASE
         )
         if owner_match:
-            candidate_owner = re.sub(r"(क्षेत्र|खाते|गट).*", "", owner_match.group(1).strip()).strip()
+            candidate_owner = re.sub(r"(क्षेत्र|खाते|गट|धारणा|इतर).*", "", owner_match.group(1).strip()).strip()
             if len(candidate_owner) > 3:
                 owner = candidate_owner
                 feats = self.extract_features(owner, text)
@@ -163,31 +164,81 @@ class LandStructuringEngine:
 
         # 4. Land Area
         area_match = re.search(
-            r"(?:क्षेत्र|एकूण\s*क्षेत्र)\s*[:\-]?\s*([\d\.\s]+(?:\s*हेक्टर|\s*आर|\s*चौ\.मी)?)",
-            text, re.UNICODE
+            r"(?:क्षेत्र|एकूण\s*क्षेत्र|land\s*area)\s*[:\-]?\s*([\d\.\s]+(?:\s*हेक्टर|\s*आर|\s*चौ\.मी|\s*हेक्टेअर|\s*hectare)?)",
+            text, re.UNICODE | re.IGNORECASE
         )
         if area_match:
             area = area_match.group(1).strip()
-            has_unit = "हेक्टर" in area or "आर" in area
+            has_unit = any(u in area.lower() for u in ["हेक्टर", "आर", "चौ.मी", "hectare"])
             if not has_unit:
                 area = f"{area} हेक्टर"
             confidence_scores["landArea"] = self._band_confidence(True, 1.0 if has_unit else 0.6)
 
-        # 5. Village / Tehsil / District
-        village_match = re.search(r"(?:गाव|मोजे)\s*[:\-]?\s*([\u0900-\u097F\s]{2,20})", text)
+        # 5. Village / Tehsil / District (strictly avoid matching 'गाव नमुना' header or multiline spills)
+        village_match = re.search(r"(?:गाव|मोजे|village)(?!\s*नमुना)\s*[:\-]\s*([^\n,]{2,30})", text, re.UNICODE | re.IGNORECASE)
         if village_match:
             village = village_match.group(1).strip()
             confidence_scores["village"] = self._band_confidence(True, 1.0)
 
-        tehsil_match = re.search(r"(?:तालुका|ता\.)\s*[:\-]?\s*([\u0900-\u097F\s]{2,20})", text)
+        tehsil_match = re.search(r"(?:तालुका|ता\.|tehsil|taluka)\s*[:\-]\s*([^\n,]{2,30})", text, re.UNICODE | re.IGNORECASE)
         if tehsil_match:
             tehsil = tehsil_match.group(1).strip()
             confidence_scores["tehsil"] = self._band_confidence(True, 1.0)
 
-        district_match = re.search(r"(?:जिल्हा|जि\.)\s*[:\-]?\s*([\u0900-\u097F\s]{2,20})", text)
+        district_match = re.search(r"(?:जिल्हा|जि\.|district)\s*[:\-]\s*([^\n,]{2,30})", text, re.UNICODE | re.IGNORECASE)
         if district_match:
             district = district_match.group(1).strip()
             confidence_scores["district"] = self._band_confidence(True, 1.0)
+
+        # 6. Ownership Type — anchored & statutory tenure matching (MLRC 1966 & All-India RoR)
+        ownership_match = re.search(
+            r"(?:धारणा\s*प्रकार|धारणाधिकार\s*प्रकार|भोगवटा\s*प्रकार|भोगवटादाराचा\s*वर्ग|खातेदार(?:ाचे)?\s*प्रकार|कब्जेदार\s*प्रकार|भूमि\s*स्वामी|हक्काचा\s*प्रकार|ownership\s*type|tenure\s*type)\s*[:\-]?\s*([^\n,]{3,60})",
+            text, re.UNICODE | re.IGNORECASE
+        )
+        if ownership_match:
+            raw_owner_val = ownership_match.group(1).strip()
+            # Normalize statutory category
+            if re.search(r"वर्ग\s*[-–]?\s*[१1]|class\s*[-–]?\s*1|निजी|व्यक्तिगत|खुद|स्वयं|private|sole|bhumidhar", raw_owner_val, re.UNICODE | re.IGNORECASE):
+                ownership = "भोगवटादार वर्ग - १ (Private / Class-1)"
+                confidence_scores["ownershipType"] = self._band_confidence(True, 1.0)
+            elif re.search(r"वर्ग\s*[-–]?\s*[२2]|class\s*[-–]?\s*2|प्रतिबंधित|restricted|inalienable", raw_owner_val, re.UNICODE | re.IGNORECASE):
+                ownership = "भोगवटादार वर्ग - २ (Restricted / Class-2)"
+                confidence_scores["ownershipType"] = self._band_confidence(True, 1.0)
+            elif re.search(r"शासकीय|सरकारी|पट्टेदार|government|lessee|public|gram\s*sabha", raw_owner_val, re.UNICODE | re.IGNORECASE):
+                ownership = "शासकीय / सरकारी जमीन (Govt Land / Lessee)"
+                confidence_scores["ownershipType"] = self._band_confidence(True, 0.95)
+            elif re.search(r"सह-खातेदार|संयुक्त|साझा|सामाईक|joint|co-owner", raw_owner_val, re.UNICODE | re.IGNORECASE):
+                ownership = "संयुक्त / सह-खातेदार (Joint Co-ownership)"
+                confidence_scores["ownershipType"] = self._band_confidence(True, 0.95)
+            elif re.search(r"कुळ|संरक्षित\s*कुळ|पट्टा|लीज|tenant|leasehold", raw_owner_val, re.UNICODE | re.IGNORECASE):
+                ownership = "पट्टा / कुळ वहिवाट (Protected Tenant / Leasehold)"
+                confidence_scores["ownershipType"] = self._band_confidence(True, 0.92)
+            elif re.search(r"देवस्थान|इनाम|ट्रस्ट|मंदिर|trust|inam", raw_owner_val, re.UNICODE | re.IGNORECASE):
+                ownership = "देवस्थान / इनाम जमीन (Trust / Inam Land)"
+                confidence_scores["ownershipType"] = self._band_confidence(True, 0.92)
+            else:
+                ownership = raw_owner_val
+                confidence_scores["ownershipType"] = self._band_confidence(True, 0.75)
+        else:
+            # Direct tenure keyword detection fallback across document
+            if re.search(r"भोगवटादार\s*वर्ग\s*[-–]?\s*[१1]|occupant\s*class\s*[-–]?\s*1", text, re.UNICODE | re.IGNORECASE):
+                ownership = "भोगवटादार वर्ग - १ (Private / Class-1)"
+                confidence_scores["ownershipType"] = self._band_confidence(False, 0.90)
+            elif re.search(r"भोगवटादार\s*वर्ग\s*[-–]?\s*[२2]|occupant\s*class\s*[-–]?\s*2", text, re.UNICODE | re.IGNORECASE):
+                ownership = "भोगवटादार वर्ग - २ (Restricted / Class-2)"
+                confidence_scores["ownershipType"] = self._band_confidence(False, 0.90)
+            elif re.search(r"शासकीय\s*पट्टेदार|सरकारी\s*पट्टेदार|शासकीय\s*जमीन|सरकारी\s*जमीन", text, re.UNICODE):
+                ownership = "शासकीय / सरकारी जमीन (Govt Land / Lessee)"
+                confidence_scores["ownershipType"] = self._band_confidence(False, 0.85)
+            elif re.search(r"सह-खातेदार|संयुक्त\s*खाता|सामाईक\s*जमीन", text, re.UNICODE):
+                ownership = "संयुक्त / सह-खातेदार (Joint Co-ownership)"
+                confidence_scores["ownershipType"] = self._band_confidence(False, 0.85)
+            elif re.search(r"देवस्थान\s*इनाम|इनाम\s*जमीन", text, re.UNICODE):
+                ownership = "देवस्थान / इनाम जमीन (Trust / Inam Land)"
+                confidence_scores["ownershipType"] = self._band_confidence(False, 0.85)
+            elif re.search(r"संरक्षित\s*कुळ|कुळ\s*वहिवाट", text, re.UNICODE):
+                ownership = "पट्टा / कुळ वहिवाट (Protected Tenant / Leasehold)"
+                confidence_scores["ownershipType"] = self._band_confidence(False, 0.85)
 
         extracted_fields = ExtractedLandFields(
             khasraNumber=khasra, khataNumber=khata, ownerName=owner,
