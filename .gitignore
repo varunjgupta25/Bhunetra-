@@ -1,37 +1,20 @@
-# Node / Frontend
+# Node & Build
 node_modules/
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+dist/
+build/
 
-# Python
+# Python & Virtual Envs
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
 env/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual Environments
-venv/
-ENV/
-env/
 .venv/
+venv/
 
 # Environment Variables & Secrets
 .env
@@ -49,14 +32,16 @@ firebase-adminsdk.json
 *.swo
 .DS_Store
 
-# Testing & Caches
+# Testing & Logs
 .pytest_cache/
 .coverage
 htmlcov/
+*.log
+coverage/
+prisma/dev.db-journal
 
-# Exclude Word Specifications from repository
+# Exclude Word Specifications & Data
 *.docx
-
-# Large Local Datasets
 backend/app/data/*.db
 backend/app/data/*.csv
+
