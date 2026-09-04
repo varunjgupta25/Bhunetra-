@@ -11,3 +11,7 @@ pillow
 slowapi
 pytest
 pytest-asyncio
+# OCR engines
+easyocr
+pdf2image
+numpy
