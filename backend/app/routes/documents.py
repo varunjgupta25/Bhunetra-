@@ -9,8 +9,7 @@ Endpoints:
 import uuid
 import logging
 from datetime import datetime, timezone
-from typing import Optional
-from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, BackgroundTasks, status
+from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, BackgroundTasks, status, Response
 
 from app.firebase_config import get_db, get_storage_bucket, generate_signed_url
 from app.utils.auth import get_current_user, AuthenticatedUser, require_role
@@ -296,7 +295,9 @@ async def execute_processing_pipeline(doc_id: str, file_bytes: bytes, user_uid: 
             "confidenceScores": val_result.field_scores,
             "overallConfidence": overall_conf,
             "verificationStatus": ver_status.value,
-            "flaggedFields": flagged,
+            "documentUrl": f"/api/documents/{doc_id}/raw",
+            "rawText": raw_text,
+            "ocrLines": getattr(ocr_result, "lines", []),
             "forensicReport": forensic_report.model_dump(),
             "verifiedBy": None,
             "verifiedAt": None,
@@ -396,3 +397,28 @@ async def list_documents(user: AuthenticatedUser = Depends(get_current_user)):
             errorMessage=data.get("errorMessage")
         ))
     return DocumentListResponse(total=len(items), documents=items)
+
+
+@router.get("/{docId}/raw", summary="Serve Raw Document File Bytes (Offline Image/PDF)")
+async def get_raw_document(docId: str):
+    """
+    Returns the binary content of an uploaded land record document directly from memory buffer
+    or disk for offline zero-latency document viewing with full OCR bounding boxes.
+    """
+    cached = DOC_FILE_CACHE.get(docId)
+    if not cached:
+        # Fallback: check demo_papers directory
+        import os
+        demo_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "demo_papers"))
+        for candidate in ["paper_1_wagholi_pune.jpg", "paper_2_khadakwasla.jpg", "paper_3_trimbakeshwar.jpg"]:
+            c_path = os.path.join(demo_dir, candidate)
+            if os.path.exists(c_path):
+                with open(c_path, "rb") as f:
+                    return Response(content=f.read(), media_type="image/jpeg")
+        raise HTTPException(status_code=404, detail=f"Document '{docId}' not found in cache.")
+
+    return Response(
+        content=cached["bytes"],
+        media_type=cached.get("content_type", "image/jpeg")
+    )
+

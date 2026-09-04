@@ -53,6 +53,9 @@ class LandRecord(BaseModel):
     flaggedFields: List[str] = Field(default_factory=list, description="Fields below the confidence threshold")
     
     documentUrl: Optional[str] = Field(None, description="Signed URL to view original document image/PDF")
+    rawText: Optional[str] = Field(None, description="Full OCR extracted raw text")
+    ocrLines: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="OCR line segments with coordinates and confidence")
+    forensicReport: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Forensic tamper & authenticity analysis")
     
     verifiedBy: Optional[str] = None
     verifiedAt: Optional[str] = None
