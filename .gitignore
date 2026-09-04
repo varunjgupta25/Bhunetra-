@@ -35,6 +35,7 @@ wheels/
 .env.*.local
 frontend/.env
 firebase-adminsdk.json
+backend/firebase-adminsdk.json
 *.pem
 *.key
 
