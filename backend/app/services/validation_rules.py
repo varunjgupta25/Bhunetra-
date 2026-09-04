@@ -61,8 +61,8 @@ class LandRecordValidator:
             return 0.10, ["Khasra / Survey Number is missing."]
 
         val = str(value).strip()
-        # Accept numbers, slashes, sub-parts like "142/3", "142/3A", "58-B", CTS numbers like "CTS-1420", and lists like "12, 14/2"
-        pattern = r"^(?:CTS[\s\-\/\.]*)?[0-9A-Za-z]+(?:[\/\-\.\,\s]+[0-9A-Za-z]+)*$"
+        # Accept numbers, slashes, sub-parts like "142/3", "142/3A", "58-B", Devanagari numerals like "१४२/३अ", "१४२३अ", CTS numbers like "CTS-1420", and lists like "12, 14/2"
+        pattern = r"^(?:CTS[\s\-\/\.]*)?[0-9A-Za-z\u0966-\u096F\u0900-\u097F]+(?:[\/\-\.\,\s]+[0-9A-Za-z\u0966-\u096F\u0900-\u097F]+)*$"
         if not re.match(pattern, val):
             errors.append(f"Khasra '{val}' has unusual characters or formatting.")
             return max(0.30, initial_score - 0.50), errors
@@ -79,8 +79,8 @@ class LandRecordValidator:
             return 0.20, ["Khata / Account Number is missing."]
 
         val = str(value).strip()
-        # Accept numeric, alphanumeric account, PRN identifiers, or registration numbers
-        if not re.match(r"^[0-9A-Za-z\/\-\s]+$", val):
+        # Accept numeric, alphanumeric account, PRN identifiers, Devanagari numerals like "५८२", or registration numbers
+        if not re.match(r"^[0-9A-Za-z\u0966-\u096F\u0900-\u097F\/\-\s]+$", val):
             errors.append(f"Khata '{val}' contains invalid symbols.")
             return max(0.35, initial_score - 0.45), errors
 

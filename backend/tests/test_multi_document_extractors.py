@@ -177,3 +177,57 @@ def test_extract_registered_sale_deed():
 
     val_res = validator.validate_record(extracted, scores)
     assert val_res.is_valid is True
+
+
+def test_extract_form_7_12_multiline_tabular_easyocr():
+    """Validates real EasyOCR tabular output with multiline cells and Devanagari numerals."""
+    real_ocr = """
+    सत्मनेव जगते
+    महाराष्ट्र शासन
+    नमुना सात
+    अधिकार अभिलेख पत्रक
+    जिल्हा : पुणे
+    तालुका : हवेली
+    गाव
+    वाघोली
+    गट क्रमांक खसरा
+    १४२३अ
+    खात क्रमांक
+    ५८२
+    भूथारणा प्रकार
+    भोगवटादार वर्ग - १
+    भोगवटादार
+    रमेश विठ्ठल पाटील
+    कुळ यत्र क्षेत्र : १.४५ हेक्टर
+    पोटखराबा क्षेत्र :
+    ०.०५ हेक्टर
+    तहासीलदार , हवेली - पुणे
+    १८|०६ | २०२४
+    """
+    extracted, scores = structuring_engine.extract_fields(real_ocr)
+
+    assert extracted.documentCategory == DocumentCategory.VILLAGE_FORM_7_12.value
+    assert extracted.khasraNumber == "१४२३अ"
+    assert extracted.khataNumber == "५८२"
+    assert extracted.ownerName == "रमेश विठ्ठल पाटील"
+    assert extracted.village == "वाघोली"
+    assert extracted.tehsil == "हवेली"
+    assert extracted.district == "पुणे"
+    assert "१.४५" in extracted.landArea
+    assert "वर्ग - १" in extracted.ownershipType
+
+    # Assert normalized numerals in extraDetails
+    assert extracted.extraDetails.get("normalizedKhasra") == "1423अ"
+    assert extracted.extraDetails.get("normalizedKhata") == "582"
+
+    # Assert high confidence
+    assert scores["khasraNumber"] >= 0.85
+    assert scores["khataNumber"] >= 0.85
+    assert scores["ownerName"] >= 0.85
+    assert scores["village"] >= 0.85
+
+    # Assert validation passes without errors
+    val_res = validator.validate_record(extracted, scores)
+    assert val_res.is_valid is True
+    assert len(val_res.field_errors) == 0
+

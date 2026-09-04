@@ -55,6 +55,17 @@ ANCHORED_MATCH_BASE = 0.80
 # than an anchored match because it's a guess, not a labeled read.
 UNANCHORED_MATCH_BASE = 0.45
 
+# ── Devanagari Numeral Normalization ──────────────────────────────────────────
+DEVANAGARI_DIGITS = "०१२३४५६७८९"
+ARABIC_DIGITS = "0123456789"
+DEV_TO_ARABIC_TABLE = str.maketrans(DEVANAGARI_DIGITS, ARABIC_DIGITS)
+
+def normalize_devanagari_numerals(val: Optional[str]) -> Optional[str]:
+    """Converts Devanagari numerals (०१२३४५६७८९) to standard Arabic digits (0123456789)."""
+    if not val:
+        return val
+    return str(val).translate(DEV_TO_ARABIC_TABLE)
+
 
 class MLFeatureVector(BaseModel):
     """Features computed from OCR text lines, used to adjust confidence within a match band."""
@@ -213,35 +224,56 @@ class LandStructuringEngine:
         return round(max(prob, floor), 3)
 
     def _extract_geography(self, text: str, confidence_scores: Dict[str, float]) -> Tuple[Optional[str], Optional[str], Optional[str]]:
-        """Common extraction for village, taluka/tehsil, and district."""
+        """Common extraction for village, taluka/tehsil, and district with inline and multiline layout tolerance."""
         village: Optional[str] = None
         tehsil: Optional[str] = None
         district: Optional[str] = None
 
-        village_match = re.search(r"(?:गाव|मोजे|village|city|शहर)(?!\s*नमुना)\s*[:\-]\s*([^\n,\t]{2,40})", text, re.UNICODE | re.IGNORECASE)
+        # Village: matches "गाव : वाघोली", "गाव - वाघोली", or tabular "गाव\nवाघोली"
+        village_match = re.search(
+            r"(?:गाव|मोजे|village|city|शहर)(?!\s*नमुना)(?:\s*[:\-]\s*|\s*\n\s*)([^\n,\t]{2,40})",
+            text, re.UNICODE | re.IGNORECASE
+        )
         if village_match:
             raw_v = village_match.group(1).strip()
             village = re.split(r"\s{2,}|\t|(?:तालुका|ता\.|जिल्हा|जि\.|district|tehsil)\s*[:\-]", raw_v)[0].strip()
-            confidence_scores["village"] = self._band_confidence(True, 1.0)
+            if len(village) >= 2 and not any(w in village for w in ["नमुना", "पत्रक", "अभिलेख", "महाराष्ट्र", "शासन"]):
+                confidence_scores["village"] = self._band_confidence(True, 1.0)
+            else:
+                village = None
 
-        tehsil_match = re.search(r"(?:तालुका|ता\.|tehsil|taluka)\s*[:\-]\s*([^\n,\t]{2,40})", text, re.UNICODE | re.IGNORECASE)
+        # Tehsil: matches "तालुका : हवेली", "तालुका\nहवेली", etc.
+        tehsil_match = re.search(
+            r"(?:तालुका|ता\.|tehsil|taluka)\s*(?:[:\-]\s*|\s*\n\s*)([^\n,\t]{2,40})",
+            text, re.UNICODE | re.IGNORECASE
+        )
         if tehsil_match:
             raw_t = tehsil_match.group(1).strip()
             tehsil = re.split(r"\s{2,}|\t|(?:जिल्हा|जि\.|district)\s*[:\-]", raw_t)[0].strip()
-            confidence_scores["tehsil"] = self._band_confidence(True, 1.0)
+            if len(tehsil) >= 2 and not any(w in tehsil for w in ["नमुना", "पत्रक", "अभिलेख", "महाराष्ट्र"]):
+                confidence_scores["tehsil"] = self._band_confidence(True, 1.0)
+            else:
+                tehsil = None
 
-        district_match = re.search(r"(?:जिल्हा|जि\.|district)\s*[:\-]\s*([^\n,\t]{2,40})", text, re.UNICODE | re.IGNORECASE)
+        # District: matches "जिल्हा : पुणे", "जिल्हा\nपुणे", etc.
+        district_match = re.search(
+            r"(?:जिल्हा|जि\.|district)\s*(?:[:\-]\s*|\s*\n\s*)([^\n,\t]{2,40})",
+            text, re.UNICODE | re.IGNORECASE
+        )
         if district_match:
             raw_d = district_match.group(1).strip()
             district = re.split(r"\s{2,}|\t|(?:पिन|pin)\s*[:\-]", raw_d)[0].strip()
-            confidence_scores["district"] = self._band_confidence(True, 1.0)
+            if len(district) >= 2 and not any(w in district for w in ["नमुना", "पत्रक", "अभिलेख", "महाराष्ट्र"]):
+                confidence_scores["district"] = self._band_confidence(True, 1.0)
+            else:
+                district = None
 
         return village, tehsil, district
 
     def _extract_ownership_type(self, text: str, confidence_scores: Dict[str, float]) -> Optional[str]:
-        """Extracts and normalizes statutory ownership classifications."""
+        """Extracts and normalizes statutory ownership classifications with OCR noise tolerance."""
         ownership_match = re.search(
-            r"(?:धारणा\s*प्रकार|धारणाधिकार\s*प्रकार|भोगवटा\s*प्रकार|भोगवटादाराचा\s*वर्ग|खातेदार(?:ाचे)?\s*प्रकार|कब्जेदार\s*प्रकार|भूमि\s*स्वामी|हक्काचा\s*प्रकार|ownership\s*type|tenure\s*type)\s*[:\-]?\s*([^\n,]{3,60})",
+            r"(?:धारणा\s*प्रकार|भू[धथ]ारणा\s*प्रकार|धारणाधिकार\s*प्रकार|भोगवटा\s*प्रकार|भोगवटादाराचा\s*वर्ग|भोगवटादार\s*वर्ग|खातेदार(?:ाचे)?\s*प्रकार|कब्जेदार\s*प्रकार|भूमि\s*स्वामी|हक्काचा\s*प्रकार|ownership\s*type|tenure\s*type)\s*(?:[:\-]\s*|\s*\n\s*|\s+)([^\n,]{3,60})",
             text, re.UNICODE | re.IGNORECASE
         )
         if ownership_match:
@@ -292,10 +324,10 @@ class LandStructuringEngine:
 
     def _extract_form_7_12(self, text: str, confidence_scores: Dict[str, float]) -> ExtractedLandFields:
         """Dedicated extractor for Maharashtra Form 7/12 (Satbara) records."""
-        # 1. Khasra / Survey Number
+        # 1. Khasra / Survey Number (supports inline "गट क्र : 142/3A" and multiline tabular "गट क्रमांक खसरा\n१४२३अ")
         khasra: Optional[str] = None
         khasra_match = re.search(
-            r"(?:भूमापन\s*क्र(?:मांक|\.)?|गट\s*क्र(?:मांक|\.)?|सर्वे\s*नं(?:बर|\.)?|khasra\s*no|survey\s*no)(?:[^:\n\d]*[:\-])?\s*([\d]+[/\w\-\u0900-\u097F]*)",
+            r"(?:भूमापन\s*क्र(?:मांक|\.)?|गट\s*(?:क्रमांक|क्र\.?)(?:\s*खसरा)?|सर्वे\s*(?:नंबर|नं\.?)|खसरा\s*(?:क्रमांक|नं\.?|no\.?)|survey\s*no\.?|khasra\s*no\.?)(?:\s*[:\-]\s*|\s*\n\s*|\s+)([0-9\u0966-\u096F]+[/\w\-\u0900-\u097F]*)",
             text, re.UNICODE | re.IGNORECASE
         )
         if khasra_match:
@@ -303,39 +335,41 @@ class LandStructuringEngine:
             feats = self.extract_features(khasra, text)
             confidence_scores["khasraNumber"] = self._band_confidence(True, feats.digit_ratio + (0.3 if feats.has_slash else 0))
         else:
-            khasra_fallback = re.search(r"(\b\d{1,4}\s*/\s*[\d\wA-Za-z\u0900-\u097F]+\b)", text)
+            khasra_fallback = re.search(r"(\b[0-9\u0966-\u096F]{1,4}\s*/\s*[0-9\u0966-\u096F\wA-Za-z\u0900-\u097F]+\b)", text)
             if khasra_fallback and "7/12" not in khasra_fallback.group(1) and "७/१२" not in khasra_fallback.group(1):
                 khasra = khasra_fallback.group(1).strip()
                 feats = self.extract_features(khasra, text)
                 confidence_scores["khasraNumber"] = self._band_confidence(False, feats.digit_ratio)
 
-        # 2. Khata / Account Number
+        # 2. Khata / Account Number (supports inline and multiline tabular "खात क्रमांक\n५८२")
         khata: Optional[str] = None
         khata_match = re.search(
-            r"(?:खाते\s*क्र(?:मांक|\.)?|खाता\s*नं(?:बर|\.)?|khata\s*no)\s*[:\-]?\s*(\d{1,6})",
+            r"(?:खाते\s*क्र(?:मांक|\.)?|खाता\s*नं(?:बर|\.)?|खात\s*क्र(?:मांक|\.)?|khata\s*(?:no|number))(?:\s*[:\-]\s*|\s*\n\s*|\s+)([0-9\u0966-\u096F]{1,8})",
             text, re.UNICODE | re.IGNORECASE
         )
         if khata_match:
             khata = khata_match.group(1).strip()
             confidence_scores["khataNumber"] = self._band_confidence(True, 1.0)
 
-        # 3. Owner Name
+        # 3. Owner Name (skips tenure labels like 'वर्ग - १' and captures actual person names)
         owner: Optional[str] = None
-        owner_match = re.search(
-            r"(?:खातेदाराचे\s*नाव|भोगवटादाराचे\s*नाव|भोगवटादार|जमीन\s*मालकाचे\s*नाव)\s*[:\-]?\s*([^\n,:]{4,50})",
+        invalid_owner_words = ["वर्ग", "प्रकार", "नमुना", "क्षेत्र", "अधिकार", "अभिलेख", "पत्रक", "महाराष्ट्र", "शासन", "तहासीलदार", "तारीख"]
+        owner_candidates = re.findall(
+            r"(?:खातेदाराचे\s*नाव|भोगवटादाराचे\s*नाव|भोगवटादार(?!\s*वर्ग)|खातेदार(?!\s*वर्ग)|जमीन\s*मालकाचे\s*नाव|मालकाचे\s*नाव)(?:\s*[:\-]\s*|\s*\n\s*)([^\n,:]{3,50})",
             text, re.UNICODE | re.IGNORECASE
         )
-        if owner_match:
-            candidate_owner = re.sub(r"(क्षेत्र|खाते|गट|धारणा|इतर).*", "", owner_match.group(1).strip()).strip()
-            if len(candidate_owner) > 3:
-                owner = candidate_owner
+        for cand in owner_candidates:
+            cand_clean = re.sub(r"(क्षेत्र|खाते|गट|धारणा|इतर|वर्ग).*", "", cand.strip()).strip()
+            if len(cand_clean) >= 3 and not any(w in cand_clean for w in invalid_owner_words):
+                owner = cand_clean
                 feats = self.extract_features(owner, text)
                 confidence_scores["ownerName"] = self._band_confidence(True, feats.devanagari_char_ratio)
+                break
 
-        # 4. Land Area
+        # 4. Land Area (supports Devanagari and Latin numbers with unit, e.g. "कुळ यत्र क्षेत्र : १.४५ हेक्टर")
         area: Optional[str] = None
         area_match = re.search(
-            r"(?:क्षेत्र|एकूण\s*क्षेत्र|land\s*area)\s*[:\-]?\s*([\d\.\s]+(?:\s*हेक्टर|\s*आर|\s*चौ\.मी|\s*हेक्टेअर|\s*hectare)?)",
+            r"(?:कुळ\s*यत्र\s*क्षेत्र|एकूण\s*क्षेत्र|क्षेत्र|land\s*area)\s*[:\-]?\s*([0-9\u0966-\u096F\.\s]+(?:\s*हेक्टर|\s*आर|\s*चौ\.मी|\s*हेक्टेअर|\s*hectare)?)",
             text, re.UNICODE | re.IGNORECASE
         )
         if area_match:
@@ -358,7 +392,12 @@ class LandStructuringEngine:
             landArea=area,
             ownershipType=ownership,
             documentCategory=DocumentCategory.VILLAGE_FORM_7_12.value,
-            extraDetails={"documentType": "गाव नमुना सात-बारा (7/12 Extract)"}
+            extraDetails={
+                "documentType": "गाव नमुना सात-बारा (7/12 Extract)",
+                "normalizedKhasra": normalize_devanagari_numerals(khasra),
+                "normalizedKhata": normalize_devanagari_numerals(khata),
+                "normalizedArea": normalize_devanagari_numerals(area),
+            }
         )
 
     def _extract_form_8a(self, text: str, confidence_scores: Dict[str, float]) -> ExtractedLandFields:
@@ -366,7 +405,7 @@ class LandStructuringEngine:
         # 1. Khata Number (Primary anchor in Form 8-A)
         khata: Optional[str] = None
         khata_match = re.search(
-            r"(?:खाते\s*क्र(?:मांक|\.)?|खाता\s*नं(?:बर|\.)?|खाते\s*पुस्तक\s*क्र(?:मांक|\.)?|khata\s*no)\s*[:\-]?\s*(\d{1,8})",
+            r"(?:खाते\s*क्र(?:मांक|\.)?|खाता\s*नं(?:बर|\.)?|खाते\s*पुस्तक\s*क्र(?:मांक|\.)?|खात\s*क्र(?:मांक|\.)?|khata\s*no)\s*(?:[:\-]\s*|\s*\n\s*|\s+)([0-9\u0966-\u096F]{1,8})",
             text, re.UNICODE | re.IGNORECASE
         )
         if khata_match:
@@ -376,11 +415,11 @@ class LandStructuringEngine:
         # 2. Owner Name (Khatedar)
         owner: Optional[str] = None
         owner_match = re.search(
-            r"(?:खातेदाराचे\s*नाव|भोगवटादाराचे\s*नाव|जमीन\s*धारकाचे\s*नाव|खातेदार(?:\s*नाव)?)\s*(?:\([^)]*\))?\s*[:\-]\s*([^\n,:]{4,50})",
+            r"(?:खातेदाराचे\s*नाव|भोगवटादाराचे\s*नाव|जमीन\s*धारकाचे\s*नाव|खातेदार(?!\s*वर्ग)(?:\s*नाव)?)\s*(?:\([^)]*\))?\s*(?:[:\-]\s*|\s*\n\s*)([^\n,:]{3,50})",
             text, re.UNICODE | re.IGNORECASE
         )
         if owner_match:
-            candidate_owner = re.sub(r"(क्षेत्र|खाते|गट|धारणा|एकूण|आकारणी).*", "", owner_match.group(1).strip()).strip()
+            candidate_owner = re.sub(r"(क्षेत्र|खाते|गट|धारणा|एकूण|आकारणी|वर्ग).*", "", owner_match.group(1).strip()).strip()
             if len(candidate_owner) > 3:
                 owner = candidate_owner
                 feats = self.extract_features(owner, text)
@@ -394,11 +433,11 @@ class LandStructuringEngine:
         )
         if parcels_match:
             for p_str in parcels_match:
-                items = [item.strip() for item in re.split(r"[,、\s]+", p_str) if item.strip() and re.search(r"\d", item)]
+                items = [item.strip() for item in re.split(r"[,、\s]+", p_str) if item.strip() and re.search(r"[\d\u0966-\u096F]", item)]
                 sub_parcels.extend(items)
 
         if not sub_parcels:
-            raw_parcels = re.findall(r"\b(\d{1,4}(?:/\d{1,4})?)\b", text)
+            raw_parcels = re.findall(r"\b([0-9\u0966-\u096F]{1,4}(?:/[0-9\u0966-\u096F]{1,4})?)\b", text)
             sub_parcels = [p for p in raw_parcels if p != khata and p not in ["8", "8A", "८", "८-अ"]][:6]
 
         seen = set()
@@ -417,7 +456,7 @@ class LandStructuringEngine:
         # 4. Total Area
         area: Optional[str] = None
         area_match = re.search(
-            r"(?:एकूण\s*क्षेत्र|जुमला\s*क्षेत्र|क्षेत्र|आकारणीस\s*पात्र\s*क्षेत्र|land\s*area)\s*[:\-]?\s*([\d\.\s]+(?:\s*हेक्टर|\s*आर|\s*चौ\.मी|\s*हेक्टेअर)?)",
+            r"(?:एकूण\s*क्षेत्र|जुमला\s*क्षेत्र|क्षेत्र|आकारणीस\s*पात्र\s*क्षेत्र|land\s*area)\s*[:\-]?\s*([0-9\u0966-\u096F\.\s]+(?:\s*हेक्टर|\s*आर|\s*चौ\.मी|\s*हेक्टेअर)?)",
             text, re.UNICODE | re.IGNORECASE
         )
         if area_match:
