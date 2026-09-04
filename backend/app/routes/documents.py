@@ -19,6 +19,7 @@ from app.schemas.document import DocumentUploadResponse, DocumentItem, DocumentL
 from app.schemas.record import ExtractedLandFields
 from app.services.ocr_service import ocr_service
 from app.services.ml_structuring_engine import ml_structuring_engine
+from app.services.document_classifier import DocumentCategory
 from app.services.validation_rules import validator
 from app.utils.confidence import calculate_overall_confidence
 
@@ -220,12 +221,37 @@ async def execute_processing_pipeline(doc_id: str, file_bytes: bytes, user_uid: 
         ocr_result = await ocr_service.extract_text(file_bytes, source_language="mr")
         raw_text = ocr_result.raw_text  # Assign raw OCR text for downstream pipeline stages
 
-        # 2. Extract structured fields with dedicated ML Structuring Engine (100% Offline & Sovereign)
+        # Fetch document filename for classification context
+        doc_snap = db.collection("documents").document(doc_id).get()
+        doc_filename = doc_snap.to_dict().get("fileName", "") if doc_snap.exists else ""
+
+        # 2. Document Classification (Multi-signal Land vs Non-Land Gatekeeper)
+        classification = ml_structuring_engine.classify_document(raw_text, filename=doc_filename)
+        logger.info(f"Document {doc_id} classified as {classification.category.value} (confidence={classification.confidence:.2f})")
+
+        # STRICT REJECTION GATE: Non-land documents are rejected without creating fraudulent land records
+        if classification.category == DocumentCategory.NON_LAND_DOCUMENT:
+            rejection_msg = classification.rejection_reason or "THE UPLOADED DOCUMENT IS NOT A LAND RECORD"
+            logger.warning(f"Rejecting document {doc_id}: {rejection_msg}")
+            db.collection("documents").document(doc_id).update({
+                "status": DocumentStatus.REJECTED.value,
+                "documentCategory": classification.category.value,
+                "categoryLabel": classification.category_label,
+                "errorMessage": rejection_msg,
+                "detectedTitle": classification.detected_title,
+                "classificationConfidence": classification.confidence
+            })
+            return
+
+        # 3. Extract structured fields with dedicated ML Structuring Engine (100% Offline & Sovereign)
         extracted, ml_scores = ml_structuring_engine.extract_fields(
-            raw_text, ocr_is_fallback=getattr(ocr_result, "is_fallback", False)
+            raw_text,
+            ocr_is_fallback=getattr(ocr_result, "is_fallback", False),
+            classification=classification,
+            filename=doc_filename
         )
 
-        # 3. Apply Validation Rules & Forensic ELA Analysis
+        # 4. Apply Validation Rules & Forensic ELA Analysis
         initial_scores = ml_scores
         val_result = validator.validate_record(extracted, raw_confidence=initial_scores)
 
@@ -239,7 +265,7 @@ async def execute_processing_pipeline(doc_id: str, file_bytes: bytes, user_uid: 
             existing_records=existing_recs
         )
 
-        # 4. Compute Confidence & Status Routing
+        # 5. Compute Confidence & Status Routing
         overall_conf, ver_status, flagged = calculate_overall_confidence(val_result.field_scores)
 
         # If forensic engine flagged forgery or collision, override status to PENDING_REVIEW
@@ -247,13 +273,16 @@ async def execute_processing_pipeline(doc_id: str, file_bytes: bytes, user_uid: 
             ver_status = VerificationStatus.PENDING_REVIEW
             flagged.append("forensic_tamper_flag")
 
-        # 5. Save Record to Firestore /records
+        # 6. Save Record to Firestore /records
         record_id = str(uuid.uuid4())
         now_iso = datetime.now(timezone.utc).isoformat()
         
         record_data = {
             "recordId": record_id,
             "docId": doc_id,
+            "documentCategory": classification.category.value,
+            "categoryLabel": classification.category_label,
+            "classificationConfidence": classification.confidence,
             "khasraNumber": extracted.khasraNumber,
             "khataNumber": extracted.khataNumber,
             "ownerName": extracted.ownerName,
@@ -262,6 +291,7 @@ async def execute_processing_pipeline(doc_id: str, file_bytes: bytes, user_uid: 
             "district": extracted.district,
             "landArea": extracted.landArea,
             "ownershipType": extracted.ownershipType,
+            "extraDetails": extracted.extraDetails or {},
             "extractedFields": extracted.model_dump(),
             "confidenceScores": val_result.field_scores,
             "overallConfidence": overall_conf,
@@ -275,7 +305,7 @@ async def execute_processing_pipeline(doc_id: str, file_bytes: bytes, user_uid: 
         }
         db.collection("records").document(record_id).set(record_data)
 
-        # 6. If pending review, enqueue to /verificationQueue
+        # 7. If pending review, enqueue to /verificationQueue
         if ver_status == VerificationStatus.PENDING_REVIEW:
             queue_id = str(uuid.uuid4())
             queue_data = {
@@ -290,15 +320,17 @@ async def execute_processing_pipeline(doc_id: str, file_bytes: bytes, user_uid: 
             }
             db.collection("verificationQueue").document(queue_id).set(queue_data)
 
-        # 7. Update document status to PROCESSED (use extracted geographic fields)
+        # 8. Update document status to PROCESSED (use extracted geographic fields)
         db.collection("documents").document(doc_id).update({
             "status": DocumentStatus.PROCESSED.value,
+            "documentCategory": classification.category.value,
+            "categoryLabel": classification.category_label,
             "district": extracted.district,
             "village": extracted.village,
             "recordId": record_id
         })
 
-        logger.info(f"✅ Pipeline completed for docId={doc_id}. Record {record_id} created ({ver_status.value}).")
+        logger.info(f"✅ Pipeline completed for docId={doc_id}. Record {record_id} created ({ver_status.value}, {classification.category.value}).")
 
     except Exception as e:
         logger.error(f"Pipeline processing failed for docId={doc_id}: {e}")
@@ -357,6 +389,8 @@ async def list_documents(user: AuthenticatedUser = Depends(get_current_user)):
             uploadedBy=data.get("uploadedBy", "anonymous"),
             uploadedAt=data.get("uploadedAt", datetime.now(timezone.utc).isoformat()),
             status=data.get("status", DocumentStatus.PENDING),
+            documentCategory=data.get("documentCategory"),
+            categoryLabel=data.get("categoryLabel"),
             district=data.get("district"),
             village=data.get("village"),
             errorMessage=data.get("errorMessage")

@@ -26,6 +26,8 @@ class DocumentItem(BaseModel):
     uploadedBy: str
     uploadedAt: str
     status: DocumentStatus
+    documentCategory: Optional[str] = None
+    categoryLabel: Optional[str] = None
     district: Optional[str] = None
     village: Optional[str] = None
     errorMessage: Optional[str] = None
