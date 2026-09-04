@@ -14,9 +14,9 @@ logger = logging.getLogger("bhunetra.validation")
 VALID_LAND_AREA_UNITS = [
     # English
     "hectare", "hectares", "ha", "acre", "acres", "ac", "guntha", "gunthas",
-    "bigha", "bighas", "biswa", "cent", "cents", "sq. meter", "sq meter", "sqm", "sq. ft", "sq ft",
+    "bigha", "bighas", "biswa", "cent", "cents", "sq. meter", "sq meter", "sqm", "sq. mtr", "sq. ft", "sq ft", "sqft", "sq.ft.",
     # Hindi / Marathi transliterations and scripts
-    "हेक्टर", "एकड", "एकर", "गुंठा", "गुंठे", "बीघा", "बिस्वा", "चौ.मी.", "चौरस मीटर", "आर", "aar", "r"
+    "हेक्टर", "एकड", "एकर", "गुंठा", "गुंठे", "बीघा", "बिस्वा", "चौ.मी.", "चौ.मी", "चौरस मीटर", "चौ.फूट", "चौ फूट", "चौरस फूट", "आर", "aar", "r"
 ]
 
 # Common Indian Ownership classifications
@@ -61,13 +61,13 @@ class LandRecordValidator:
             return 0.10, ["Khasra / Survey Number is missing."]
 
         val = str(value).strip()
-        # Accept numbers, slashes, sub-parts like "142/3", "142/3A", "58-B"
-        pattern = r"^[0-9]+([\/\-\.][0-9A-Za-z]+)*$"
+        # Accept numbers, slashes, sub-parts like "142/3", "142/3A", "58-B", CTS numbers like "CTS-1420", and lists like "12, 14/2"
+        pattern = r"^(?:CTS[\s\-\/\.]*)?[0-9A-Za-z]+(?:[\/\-\.\,\s]+[0-9A-Za-z]+)*$"
         if not re.match(pattern, val):
             errors.append(f"Khasra '{val}' has unusual characters or formatting.")
             return max(0.30, initial_score - 0.50), errors
 
-        if len(val) > 20:
+        if len(val) > 60:
             errors.append("Khasra number is suspiciously long.")
             return max(0.40, initial_score - 0.40), errors
 
@@ -79,8 +79,8 @@ class LandRecordValidator:
             return 0.20, ["Khata / Account Number is missing."]
 
         val = str(value).strip()
-        # Usually purely numeric or alphanumeric account
-        if not re.match(r"^[0-9A-Za-z\/\-]+$", val):
+        # Accept numeric, alphanumeric account, PRN identifiers, or registration numbers
+        if not re.match(r"^[0-9A-Za-z\/\-\s]+$", val):
             errors.append(f"Khata '{val}' contains invalid symbols.")
             return max(0.35, initial_score - 0.45), errors
 

@@ -1,0 +1,168 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Role constants: 'CUSTOMER', 'ENTREPRENEUR', 'LOGISTICS', 'ADMIN'
+// UserStatus constants: 'ACTIVE', 'SUSPENDED', 'PENDING'
+// VerificationStatus constants: 'PENDING', 'VERIFIED', 'REJECTED', 'APPROVED'
+// DocType constants: 'FSSAI', 'GST', 'UDYAM', 'ARTISAN_CARD', 'QUALITY_CERT', 'OTHER'
+// ProductStatus constants: 'DRAFT', 'PENDING', 'VERIFIED', 'REJECTED'
+// PaymentStatus constants: 'PENDING', 'COMPLETED', 'FAILED', 'REFUNDED'
+// OrderStatus constants: 'PLACED', 'CONFIRMED', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'
+// TrackingStatus constants: 'PICKUP_REQUESTED', 'PARTNER_ASSIGNED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED'
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  phone        String?
+  name         String
+  passwordHash String
+  role         String   @default("CUSTOMER")
+  status       String   @default("ACTIVE")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  entrepreneurProfile EntrepreneurProfile?
+  documents           Document[]           @relation("OwnerDocuments")
+  orders              Order[]              @relation("CustomerOrders")
+  shipments           Shipment[]           @relation("PartnerShipments")
+  reviews             Review[]             @relation("CustomerReviews")
+  auditLogs           AuditLog[]           @relation("ActorAuditLogs")
+}
+
+model EntrepreneurProfile {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName       String
+  village            String
+  district           String
+  description        String
+  contactPhone       String?
+  verificationStatus String   @default("PENDING")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  products           Product[]
+}
+
+model Product {
+  id             String   @id @default(uuid())
+  entrepreneurId String
+  entrepreneur   EntrepreneurProfile @relation(fields: [entrepreneurId], references: [id], onDelete: Cascade)
+  title          String
+  description    String
+  category       String
+  price          Float
+  stock          Int      @default(0)
+  originVillage  String
+  originDistrict String
+  story          String
+  status         String   @default("PENDING")
+  imageUrl       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  batches        ProductBatch[]
+  orderItems     OrderItem[]
+  reviews        Review[]
+}
+
+model ProductBatch {
+  id                 String   @id @default(uuid())
+  productId          String
+  product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  batchNo            String   @unique
+  manufactureDate    String
+  expiryDate         String?
+  qrId               String   @unique @default(uuid())
+  verificationStatus String   @default("PENDING")
+  notes              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Document {
+  id                 String   @id @default(uuid())
+  ownerId            String
+  owner              User     @relation("OwnerDocuments", fields: [ownerId], references: [id], onDelete: Cascade)
+  type               String
+  fileName           String
+  storageKey         String
+  verificationStatus String   @default("PENDING")
+  reviewerNote       String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Order {
+  id              String   @id @default(uuid())
+  customerId      String
+  customer        User     @relation("CustomerOrders", fields: [customerId], references: [id], onDelete: Cascade)
+  totalAmount     Float
+  paymentStatus   String   @default("PENDING")
+  orderStatus     String   @default("PLACED")
+  shippingAddress String
+  recipientName   String
+  recipientPhone  String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  items           OrderItem[]
+  shipment        Shipment?
+  reviews         Review[]
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Float
+}
+
+model Shipment {
+  id                  String   @id @default(uuid())
+  orderId             String   @unique
+  order               Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  partnerId           String?
+  partner             User?    @relation("PartnerShipments", fields: [partnerId], references: [id])
+  originDistrict      String
+  destinationDistrict String
+  trackingStatus      String   @default("PICKUP_REQUESTED")
+  estimatedDelivery   String
+  trackingHistory     String   // JSON string
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   User     @relation("CustomerReviews", fields: [customerId], references: [id], onDelete: Cascade)
+  rating     Int
+  comment    String
+  createdAt  DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String
+  actor      User     @relation("ActorAuditLogs", fields: [actorId], references: [id], onDelete: Cascade)
+  action     String
+  entityType String
+  entityId   String
+  details    String?  // JSON or text
+  timestamp  DateTime @default(now())
+}

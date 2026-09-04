@@ -12,16 +12,17 @@ export function DigitizedPdfModal({ isOpen, onClose, recordData, onConfirmExport
     recordId: 'REC-712-PUNE-0941',
     khasraNumber: '142/3A',
     khataNumber: '582',
-    ownerName: 'रमेश बाबुराव पाटील',
-    ownerNameEn: 'Ramesh Baburao Patil',
-    village: 'खडकवासला',
-    villageEn: 'Khadakwasla',
-    tehsil: 'हवेली',
+    ownerName: 'रमेश विठ्ठल पाटील (Ramesh Vitthal Patil)',
+    ownerNameEn: 'Ramesh Vitthal Patil',
+    village: 'वाघोली (Wagholi)',
+    villageEn: 'Wagholi',
+    tehsil: 'हवेली (Haveli)',
     tehsilEn: 'Haveli',
-    district: 'पुणे',
+    district: 'पुणे (Pune)',
     districtEn: 'Pune',
-    landArea: '1.45 हेक्टर',
-    landAreaEn: '1.45 Hectares',
+    landArea: '1.45 हेक्टर (1.45 Hectare)',
+    landAreaEn: '1.45 Hectare',
+    encumbrance: 'बँक ऑफ महाराष्ट्र पीक कर्ज बोजा रु. ५०,०००/-',
   }
 
   const handleGenerate = () => {
@@ -72,7 +73,7 @@ export function DigitizedPdfModal({ isOpen, onClose, recordData, onConfirmExport
 
         {/* Modal Body */}
         {!showCertificateView ? (
-            <div className="p-6 space-y-6">
+          <div className="p-6 space-y-6">
             <p className="text-sm text-on-surface-variant">
               Select any of the <strong>22 Official Constitutional Languages of India (8th Schedule)</strong> below. The local ML engine will generate the digitized land extract PDF in a single pass without extra database conversions.
             </p>
@@ -98,45 +99,39 @@ export function DigitizedPdfModal({ isOpen, onClose, recordData, onConfirmExport
               </div>
 
               {/* Quick Featured Languages Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {CONSTITUTION_22_LANGUAGES.slice(0, 4).map((lang) => (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { code: 'mr', name: 'मराठी (Marathi)', icon: '🚩' },
+                  { code: 'en', name: 'English (English)', icon: '🇬🇧' },
+                  { code: 'hi', name: 'हिन्दी (Hindi)', icon: '🇮🇳' },
+                  { code: 'gu', name: 'ગુજરાતી (Gujarati)', icon: '🏛️' },
+                  { code: 'kn', name: 'ಕನ್ನಡ (Kannada)', icon: '🏛️' },
+                  { code: 'ta', name: 'தமிழ் (Tamil)', icon: '🏛️' },
+                  { code: 'te', name: 'తెలుగు (Telugu)', icon: '🏛️' },
+                  { code: 'bn', name: 'বাংলা (Bengali)', icon: '🇧🇩' },
+                ].map((l) => (
                   <button
-                    key={lang.code}
+                    key={l.code}
+                    onClick={() => setSelectedLanguage(l.code)}
                     type="button"
-                    onClick={() => setSelectedLanguage(lang.code)}
-                    className={`p-3 rounded-xl border-2 text-left transition-all ${
-                      selectedLanguage === lang.code
-                        ? 'border-primary bg-primary-container/20 font-bold shadow-sm'
-                        : 'border-outline-variant/60 hover:bg-surface-container-low'
+                    className={`p-3 rounded-xl border text-left text-xs font-bold transition-all ${
+                      selectedLanguage === l.code
+                        ? 'border-primary bg-primary-container/30 text-primary shadow-sm ring-2 ring-primary/40'
+                        : 'border-[#B8D8EE] bg-white text-on-surface hover:border-primary/50'
                     }`}
                   >
-                    <div className="flex items-center justify-between text-xs">
-                      <span>{lang.icon} {lang.nameNative}</span>
-                      {selectedLanguage === lang.code && (
-                        <span className="material-symbols-outlined text-primary text-xs font-bold">check_circle</span>
-                      )}
-                    </div>
-                    <span className="text-[10px] text-slate-500 block mt-0.5">{lang.nameEn}</span>
+                    <span className="text-base block mb-1">{l.icon}</span>
+                    <span>{l.name}</span>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Direct Storage Efficiency Note */}
-            <div className="p-3.5 rounded-xl bg-surface-container-highest/60 border border-outline-variant/40 text-xs text-on-surface-variant flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary text-base shrink-0">
-                bolt
-              </span>
-              <span>
-                <strong>Single-Pass Direct Generation:</strong> Saves 50% Firestore reads/writes and bypasses secondary translation API passes.
-              </span>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-3 pt-2">
+            {/* Action Bar */}
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-outline-variant/30">
               <button
                 onClick={onClose}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-secondary hover:bg-surface-container-highest transition-colors cursor-pointer"
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
                 type="button"
               >
                 Cancel
@@ -144,17 +139,19 @@ export function DigitizedPdfModal({ isOpen, onClose, recordData, onConfirmExport
               <button
                 onClick={handleGenerate}
                 disabled={isGenerating}
-                className="px-6 py-2.5 rounded-xl text-sm font-semibold bg-primary hover:bg-[#2DA090] text-on-primary shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                className="px-6 py-2.5 rounded-xl text-xs font-bold bg-primary text-on-primary hover:bg-[#2DA090] transition-all flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
                 type="button"
               >
                 {isGenerating ? (
                   <>
-                    <span className="material-symbols-outlined animate-spin text-lg">autorenew</span>
-                    <span>Generating Certificate...</span>
+                    <span className="material-symbols-outlined text-sm animate-spin">
+                      autorenew
+                    </span>
+                    <span>Generating Single-Pass PDF...</span>
                   </>
                 ) : (
                   <>
-                    <span className="material-symbols-outlined text-lg">download</span>
+                    <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
                     <span>Generate &amp; Preview PDF</span>
                   </>
                 )}
@@ -162,18 +159,18 @@ export function DigitizedPdfModal({ isOpen, onClose, recordData, onConfirmExport
             </div>
           </div>
         ) : (
-          /* STEP 2: Official Digitized Certificate Preview Output */
-          <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
-            {/* Action Bar */}
-            <div className="flex items-center justify-between bg-surface-container-low p-3 rounded-2xl border border-[#D0E8F5]">
-              <span className="text-xs font-semibold text-on-surface-variant flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-emerald-600 text-sm">verified</span>
-                Single-Pass PDF Generated Successfully
-              </span>
+          /* Certificate Preview Mode */
+          <div className="p-6 space-y-6">
+            {/* Top Toolbar */}
+            <div className="flex items-center justify-between bg-primary-container/20 p-3 rounded-2xl border border-primary/30">
+              <div className="flex items-center gap-2 text-xs font-semibold text-primary">
+                <span className="material-symbols-outlined text-sm">verified</span>
+                <span>Single-Pass PDF Generated Successfully</span>
+              </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={handlePrint}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-surface-container-highest text-on-surface hover:bg-surface-container-high transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-[#B8D8EE] text-on-surface hover:bg-surface-container transition-colors flex items-center gap-1 cursor-pointer"
                   type="button"
                 >
                   <span className="material-symbols-outlined text-sm">print</span>
@@ -181,7 +178,7 @@ export function DigitizedPdfModal({ isOpen, onClose, recordData, onConfirmExport
                 </button>
                 <button
                   onClick={() => alert('PDF Certificate Downloaded Successfully!')}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-primary text-on-primary hover:bg-[#2DA090] transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-primary text-on-primary hover:bg-[#2DA090] transition-colors flex items-center gap-1 cursor-pointer shadow-sm"
                   type="button"
                 >
                   <span className="material-symbols-outlined text-sm">download</span>
@@ -217,7 +214,7 @@ export function DigitizedPdfModal({ isOpen, onClose, recordData, onConfirmExport
                     : 'डिजिटल सातबारा (७/१२) उतारा'}
                 </h3>
                 <p className="text-xs text-gray-500 font-mono mt-1">
-                  (गावाचे नाव: {record.village} • तालुका: {record.tehsil} • जिल्हा: {record.district})
+                  (गावाचे नाव: {selectedLanguage === 'en' ? record.villageEn || record.village : record.village} • तालुका: {selectedLanguage === 'en' ? record.tehsilEn || record.tehsil : record.tehsil} • जिल्हा: {selectedLanguage === 'en' ? record.districtEn || record.district : record.district})
                 </p>
               </div>
 
@@ -244,16 +241,16 @@ export function DigitizedPdfModal({ isOpen, onClose, recordData, onConfirmExport
                 </thead>
                 <tbody>
                   <tr className="border-b border-gray-300">
-                    <td className="p-2 border-r border-gray-300 font-bold">{record.khasraNumber}</td>
-                    <td className="p-2 border-r border-gray-300 font-bold">{record.khataNumber}</td>
+                    <td className="p-2 border-r border-gray-300 font-bold">{record.khasraNumber || record.khasra_no}</td>
+                    <td className="p-2 border-r border-gray-300 font-bold">{record.khataNumber || record.khata_no}</td>
                     <td className="p-2 border-r border-gray-300 font-semibold">
-                      {selectedLanguage === 'en' ? record.ownerNameEn || 'Ramesh Baburao Patil' : record.ownerName}
+                      {selectedLanguage === 'en' ? record.ownerNameEn || record.ownerName : record.ownerName}
                     </td>
                     <td className="p-2 border-r border-gray-300">
-                      {selectedLanguage === 'en' ? record.landAreaEn || '1.45 Hectare' : record.landArea}
+                      {selectedLanguage === 'en' ? record.landAreaEn || record.landArea : record.landArea}
                     </td>
-                    <td className="p-2 text-emerald-700 font-medium">
-                      {selectedLanguage === 'en' ? 'Nil / Clear Title' : 'बोnamed नाही (निरंक)'}
+                    <td className={`p-2 font-medium ${record.isForged ? 'text-red-700 font-bold' : 'text-emerald-700'}`}>
+                      {selectedLanguage === 'en' ? record.encumbranceEn || record.encumbrance : record.encumbrance}
                     </td>
                   </tr>
                 </tbody>

@@ -14,9 +14,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.firebase_config import get_db, generate_signed_url
 from app.utils.auth import get_current_user, AuthenticatedUser, require_role
-from app.schemas.common import UserRole, VerificationStatus, AuditAction
+from app.schemas.common import UserRole, VerificationStatus, AuditAction, QueuePriority, QueueStatus
 from app.schemas.record import LandRecord, LandRecordListResponse, DuplicateDetectionResponse, DuplicateRecordGroup
-from app.schemas.verification import VerificationPatchRequest
+from app.schemas.verification import VerificationPatchRequest, VerificationQueueItem, VerificationQueueResponse
 from app.services.validation_rules import validator
 
 logger = logging.getLogger("bhunetra.routes.records")
@@ -92,6 +92,73 @@ async def get_duplicate_records(
     return DuplicateDetectionResponse(
         totalDuplicates=len(duplicate_groups),
         duplicates=duplicate_groups
+    )
+
+
+@router.get(
+    "/verification-queue",
+    response_model=VerificationQueueResponse,
+    summary="List Pending Human Verification Queue"
+)
+async def get_verification_queue(
+    user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    Returns all records currently waiting for human-in-the-loop review,
+    sorted by lowest confidence first (most urgent).
+    Each item is enriched with the full LandRecord for the Verification workspace.
+    """
+    db = get_db()
+    queue_snaps = db.collection("verificationQueue").get()
+
+    items = []
+    pending_count = 0
+
+    for snap in queue_snaps:
+        q = snap.to_dict()
+        queue_id = q.get("queueId", snap.id)
+        record_id = q.get("recordId")
+        status_val = q.get("status", "pending")
+
+        # Enrich with the actual land record
+        enriched_record: Optional[LandRecord] = None
+        if record_id:
+            rec_snap = db.collection("records").document(record_id).get()
+            if rec_snap.exists:
+                try:
+                    enriched_record = LandRecord(**rec_snap.to_dict())
+                except Exception:
+                    pass
+
+        try:
+            priority_val = QueuePriority(q.get("priority", "normal"))
+            status_enum = QueueStatus(status_val)
+        except ValueError:
+            priority_val = QueuePriority.NORMAL
+            status_enum = QueueStatus.PENDING
+
+        item = VerificationQueueItem(
+            queueId=queue_id,
+            recordId=record_id or "",
+            assignedTo=q.get("assignedTo"),
+            priority=priority_val,
+            status=status_enum,
+            flaggedFields=q.get("flaggedFields", []),
+            overallConfidence=float(q.get("overallConfidence", 0.0)),
+            createdAt=q.get("createdAt", ""),
+            record=enriched_record,
+        )
+        items.append(item)
+        if status_val == "pending":
+            pending_count += 1
+
+    # Sort: lowest confidence first (most urgent for review)
+    items.sort(key=lambda x: x.overallConfidence)
+
+    return VerificationQueueResponse(
+        total=len(items),
+        pendingCount=pending_count,
+        items=items,
     )
 
 

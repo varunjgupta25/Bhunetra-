@@ -97,6 +97,12 @@ async def root():
     }
 
 
+# Include Domain Routers
+app.include_router(documents_router)
+app.include_router(records_router)
+app.include_router(dashboard_router)
+app.include_router(audit_router)
+
 @app.get("/api/health", tags=["Health"])
 async def health_check():
     return {
@@ -107,12 +113,35 @@ async def health_check():
         "groqConfigured": bool(settings.GROQ_API_KEY)
     }
 
+# --- UNIFIED SINGLE-SERVER STATIC & SPA MOUNT ---
+import os
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
-# Include Domain Routers
-app.include_router(documents_router)
-app.include_router(records_router)
-app.include_router(dashboard_router)
-app.include_router(audit_router)
+FRONTEND_DIST_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
+DEMO_PAPERS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "demo_papers"))
+
+if os.path.exists(DEMO_PAPERS_DIR):
+    app.mount("/demo_papers", StaticFiles(directory=DEMO_PAPERS_DIR), name="demo_papers")
+
+if os.path.exists(FRONTEND_DIST_DIR):
+    assets_dir = os.path.join(FRONTEND_DIST_DIR, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa_frontend(full_path: str):
+        if full_path.startswith("api/") or full_path in ["docs", "redoc", "openapi.json"]:
+            return JSONResponse(status_code=404, content={"detail": "API route not found"})
+
+        target_file = os.path.join(FRONTEND_DIST_DIR, full_path)
+        if os.path.isfile(target_file):
+            return FileResponse(target_file)
+
+        index_html = os.path.join(FRONTEND_DIST_DIR, "index.html")
+        if os.path.exists(index_html):
+            return FileResponse(index_html)
+        return JSONResponse(status_code=404, content={"detail": "Frontend bundle not found"})
 
 
 if __name__ == "__main__":

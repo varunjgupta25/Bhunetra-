@@ -15,6 +15,7 @@ class DocumentStatus(str, Enum):
     PROCESSING = "processing"
     PROCESSED = "processed"
     FAILED = "failed"
+    REJECTED = "rejected"
 
 
 class VerificationStatus(str, Enum):

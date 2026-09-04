@@ -16,6 +16,8 @@ class ExtractedLandFields(BaseModel):
     district: Optional[str] = Field(None, description="District (Zilla)")
     landArea: Optional[str] = Field(None, description="Land area with units (e.g., '2.5 Hectare', '3 Acre')")
     ownershipType: Optional[str] = Field(None, description="Ownership classification (e.g., Private, Joint, Government)")
+    documentCategory: Optional[str] = Field("VILLAGE_FORM_7_12", description="Detected category of the Indian land/property document")
+    extraDetails: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Detailed category-specific extracted metadata")
 
 
 class ConfidenceScores(BaseModel):
@@ -32,6 +34,7 @@ class ConfidenceScores(BaseModel):
 class LandRecord(BaseModel):
     recordId: str
     docId: str
+    documentCategory: Optional[str] = "VILLAGE_FORM_7_12"
     khasraNumber: Optional[str] = None
     khataNumber: Optional[str] = None
     ownerName: Optional[str] = None
@@ -40,6 +43,7 @@ class LandRecord(BaseModel):
     district: Optional[str] = None
     landArea: Optional[str] = None
     ownershipType: Optional[str] = None
+    extraDetails: Dict[str, Any] = Field(default_factory=dict, description="Detailed category-specific extracted metadata")
     
     extractedFields: Dict[str, Any] = Field(default_factory=dict, description="Raw extracted key-values before verification")
     confidenceScores: Dict[str, float] = Field(default_factory=dict, description="Confidence per field (0.0 to 1.0)")

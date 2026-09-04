@@ -22,18 +22,18 @@ export function Navbar() {
   const lang = currentLanguage || 'mr'
   const currentRole = user?.role || 'officer'
 
-  const navItems = [
-    {
-      label: t('exploreTab', lang),
-      path: '/',
-      icon: 'explore',
-      roles: ['admin', 'verifier', 'officer'],
-    },
+  const allNavItems = [
     {
       label: t('dashboardTab', lang),
       path: '/dashboard',
       icon: 'dashboard',
       roles: ['admin', 'verifier', 'officer'],
+    },
+    {
+      label: t('citizenTab', lang),
+      path: '/citizen',
+      icon: 'account_balance',
+      roles: ['civilian', 'admin'],
     },
     {
       label: t('uploadTab', lang),
@@ -52,9 +52,21 @@ export function Navbar() {
       label: t('gisTab', lang),
       path: '/records',
       icon: 'map',
-      roles: ['admin', 'verifier', 'officer'],
+      roles: ['admin', 'verifier', 'officer', 'civilian'],
     },
   ]
+
+  // If unauthenticated: ONLY Explore tab is shown!
+  // If authenticated: Role-specific operational tabs are shown!
+  const navItems = isAuthenticated
+    ? allNavItems.filter((item) => item.roles.includes(currentRole))
+    : [
+        {
+          label: t('exploreTab', lang),
+          path: '/',
+          icon: 'explore',
+        },
+      ]
 
   return (
     <>
@@ -105,7 +117,7 @@ export function Navbar() {
               </div>
             </div>
 
-            <Link to="/" className="flex flex-col text-left">
+            <Link to={currentRole === 'civilian' ? '/citizen' : '/dashboard'} className="flex flex-col text-left">
               <div className="flex items-center gap-2">
                 <span className="text-amber-400 font-bold tracking-wide text-xs sm:text-sm uppercase">
                   {t('headerDept', lang)}
@@ -130,7 +142,7 @@ export function Navbar() {
                 {/* Role Switcher for Hackathon Demo */}
                 <div className="hidden lg:flex items-center gap-1 bg-[#0A1E3F] p-1 rounded border border-slate-600 text-xs">
                   <span className="px-1.5 text-[10px] font-semibold text-amber-400 uppercase">{t('roleTag', lang)}</span>
-                  {(['officer', 'verifier', 'admin']).map((r) => (
+                  {(['officer', 'verifier', 'admin', 'civilian']).map((r) => (
                     <button
                       key={r}
                       onClick={() => switchDemoRole(r)}
@@ -140,7 +152,13 @@ export function Navbar() {
                           : 'text-slate-300 hover:text-white'
                       }`}
                     >
-                      {r === 'officer' ? t('roleOfficer', lang) : r === 'verifier' ? t('roleVerifier', lang) : t('roleAdmin', lang)}
+                      {r === 'officer'
+                        ? t('roleOfficer', lang)
+                        : r === 'verifier'
+                        ? t('roleVerifier', lang)
+                        : r === 'admin'
+                        ? t('roleAdmin', lang)
+                        : t('roleCivilian', lang)}
                     </button>
                   ))}
                 </div>
@@ -173,7 +191,7 @@ export function Navbar() {
                 className="bg-amber-400 hover:bg-amber-300 text-slate-950 px-4 py-1.5 rounded-md text-xs font-bold shadow-sm transition-colors flex items-center gap-1"
               >
                 <span className="material-symbols-outlined text-[16px]">lock</span>
-                <span>अधिकारी लॉगिन</span>
+                <span>{t('officerLoginBtn', lang)}</span>
               </Link>
             )}
           </div>
