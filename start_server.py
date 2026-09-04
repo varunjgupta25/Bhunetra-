@@ -16,11 +16,8 @@ BACKEND_DIR = os.path.join(ROOT_DIR, "backend")
 def build_frontend():
     print("[1/2] Checking Frontend Production Build...")
     if not os.path.exists(FRONTEND_DIST):
-        print(" -> Building React frontend bundle with Vite...")
-        node_exe = r"C:\Users\varun\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe"
-        vite_js = os.path.join(FRONTEND_DIR, "node_modules", "vite", "bin", "vite.js")
-        cmd = [node_exe, vite_js, "build"]
-        subprocess.run(cmd, cwd=FRONTEND_DIR, check=True)
+        npm_cmd = "npm.cmd" if os.name == "nt" else "npm"
+        subprocess.run([npm_cmd, "run", "build"], cwd=FRONTEND_DIR, shell=True, check=True)
         print(" -> [SUCCESS] Frontend bundle built cleanly!")
     else:
         print(" -> [OK] Frontend dist bundle ready.")
