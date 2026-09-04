@@ -100,40 +100,80 @@ export const documentApi = {
       console.info('[Mock Mode] Simulating OCR & Groq LLM extraction pipeline')
       await new Promise((r) => setTimeout(r, 1600))
       
-      // Dynamic mock result (Maharashtra 7/12 format)
-      const mockScore = Math.random() > 0.35 ? 0.88 : 0.64 // Mix of auto-approve and review queue
-      const isLow = mockScore < 0.75
+      // Deterministic extraction record data with fixed per-field values and confidence
+      const recordId = 'REC-712-PUNE-0941'
+      const overallConfidence = 0.78
+
+      const extractedFields = {
+        villageCode: {
+          value: 'MH-PN-SH-0042',
+          confidence: 0.98,
+        },
+        khasraNumber: {
+          value: '248',
+          confidence: 0.42,
+        },
+        khataNumber: {
+          value: '582',
+          confidence: 0.91,
+        },
+        ownerName: {
+          value: 'बाबूराव रामचंद्र पाटील (Baburao Ramchandra Patil)',
+          confidence: 0.98,
+        },
+        village: {
+          value: 'हवेली (Haveli)',
+          confidence: 0.98,
+        },
+        tehsil: {
+          value: 'पुणे शहर (Pune City)',
+          confidence: 0.95,
+        },
+        district: {
+          value: 'पुणे (Pune)',
+          confidence: 0.99,
+        },
+        landArea: {
+          value: '1.25 हेक्टर (Hectare)',
+          confidence: 0.76,
+        },
+        area: {
+          value: '1.25',
+          confidence: 0.76,
+        },
+        assessment: {
+          value: '₹ 4500',
+          confidence: 0.84,
+        },
+        ownershipType: {
+          value: 'भोगवटादार वर्ग-१ (Class 1 Occupant)',
+          confidence: 0.86,
+        },
+      }
+
+      const confidenceScores = {
+        villageCode: extractedFields.villageCode.confidence,
+        khasraNumber: extractedFields.khasraNumber.confidence,
+        khataNumber: extractedFields.khataNumber.confidence,
+        ownerName: extractedFields.ownerName.confidence,
+        village: extractedFields.village.confidence,
+        tehsil: extractedFields.tehsil.confidence,
+        district: extractedFields.district.confidence,
+        landArea: extractedFields.landArea.confidence,
+        area: extractedFields.area.confidence,
+        assessment: extractedFields.assessment.confidence,
+        ownershipType: extractedFields.ownershipType.confidence,
+      }
 
       return {
-        recordId: `REC-${Date.now().toString(36).toUpperCase()}`,
+        recordId,
         docId,
-        extractedFields: {
-          khasraNumber: isLow ? '142/2-अ (Uncertain)' : '142/2-अ',
-          khataNumber: '894',
-          ownerName: 'बाबूराव रामचंद्र पाटील (Baburao Ramchandra Patil)',
-          village: 'हवेली (Haveli)',
-          tehsil: 'पुणे शहर (Pune City)',
-          district: 'पुणे (Pune)',
-          landArea: '0.45 हेक्टर (Hectare)',
-          ownershipType: 'भोगवटादार वर्ग-१ (Class 1 Occupant)',
-          surveyNumber: '142',
-          hissaNumber: '2-अ',
-          assessment: '₹ 12.50',
-        },
-        confidenceScores: {
-          khasraNumber: isLow ? 0.58 : 0.94,
-          khataNumber: 0.96,
-          ownerName: 0.91,
-          village: 0.98,
-          tehsil: 0.95,
-          district: 0.99,
-          landArea: 0.89,
-          ownershipType: 0.86,
-        },
-        overallConfidence: mockScore,
-        verificationStatus: isLow ? 'pending-review' : 'auto-approved',
-        flaggedFields: isLow ? ['khasraNumber'] : [],
-        processedAt: new Date().toISOString(),
+        extractedFields,
+        confidenceScores,
+        overallConfidence,
+        verificationStatus: 'pending-review',
+        flaggedFields: ['khasraNumber'],
+        processedAt: '2026-08-25T10:30:00.000Z',
       }
     }
   },

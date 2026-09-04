@@ -2,18 +2,81 @@ import React, { useState, useEffect } from 'react'
 import { useAppStore } from '@/store/useAppStore'
 import { recordsApi } from '@/api/axiosClient'
 import { DigitizedPdfModal } from '@/components/DigitizedPdfModal'
+import { ConfidenceBadge } from '@/components/ConfidenceBadge'
+import { cn } from '@/lib/utils'
+
+// Baseline extraction data structured per-field with value and confidence
+const DEFAULT_EXTRACTION_DATA = {
+  recordId: 'REC-712-PUNE-0941',
+  extractedFields: {
+    villageCode: {
+      value: 'MH-PN-SH-0042',
+      confidence: 0.98,
+    },
+    khasraNumber: {
+      value: '248',
+      confidence: 0.42,
+    },
+    ownerName: {
+      value: 'Ramesh Baburao Patil',
+      confidence: 0.98,
+    },
+    area: {
+      value: '1.25',
+      confidence: 0.76,
+    },
+    khataNumber: {
+      value: '582',
+      confidence: 0.91,
+    },
+    assessment: {
+      value: '₹ 4500',
+      confidence: 0.84,
+    },
+  },
+}
+
+/**
+ * Normalizes any incoming extraction payload (per-field object or split fields/scores)
+ * into a standardized { [key]: { value: string, confidence: number } } dictionary.
+ */
+function normalizeExtractedFields(rawFields = {}, confidenceScores = {}) {
+  const normalized = {}
+
+  for (const [key, val] of Object.entries(rawFields)) {
+    if (val && typeof val === 'object' && 'value' in val) {
+      normalized[key] = {
+        value: val.value !== undefined && val.value !== null ? String(val.value) : '',
+        confidence: typeof val.confidence === 'number'
+          ? val.confidence
+          : (typeof confidenceScores[key] === 'number' ? confidenceScores[key] : 0.85),
+      }
+    } else {
+      normalized[key] = {
+        value: val !== undefined && val !== null ? String(val) : '',
+        confidence: typeof confidenceScores[key] === 'number' ? confidenceScores[key] : 0.85,
+      }
+    }
+  }
+
+  for (const [key, score] of Object.entries(confidenceScores)) {
+    if (!normalized[key] && typeof score === 'number') {
+      normalized[key] = {
+        value: '',
+        confidence: score,
+      }
+    }
+  }
+
+  return normalized
+}
 
 export default function VerificationPage() {
-  const { user, pendingVerificationCount, decrementPendingCount, lastExtractedResult } = useAppStore()
+  const { user, decrementPendingCount, lastExtractedResult } = useAppStore()
 
-  const [recordId, setRecordId] = useState('REC-712-PUNE-0941')
-  const [formState, setFormState] = useState({
-    villageCode: 'MH-PN-SH-0042',
-    khasraNumber: '248',
-    ownerName: 'Ramesh Baburao Patil',
-    area: '1.25',
-    notes: '',
-  })
+  const [recordId, setRecordId] = useState(DEFAULT_EXTRACTION_DATA.recordId)
+  const [fields, setFields] = useState(DEFAULT_EXTRACTION_DATA.extractedFields)
+  const [notes, setNotes] = useState('')
 
   const [isSaved, setIsSaved] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(100)
@@ -24,25 +87,42 @@ export default function VerificationPage() {
     // If an extracted result from pipeline exists, seed form state dynamically
     if (lastExtractedResult) {
       setRecordId(lastExtractedResult.recordId || 'REC-712-PUNE-0941')
-      const fields = lastExtractedResult.extractedFields || {}
-      setFormState({
-        villageCode: 'MH-PN-SH-0042',
-        khasraNumber: fields.khasraNumber || '248',
-        ownerName: fields.ownerName || 'Ramesh Baburao Patil',
-        area: fields.landArea || '1.25',
-        notes: '',
-      })
+      const raw = lastExtractedResult.extractedFields || {}
+      const scores = lastExtractedResult.confidenceScores || {}
+      const normalized = normalizeExtractedFields(raw, scores)
+
+      setFields((prev) => ({
+        ...prev,
+        ...normalized,
+        area: normalized.area || normalized.landArea || prev.area,
+      }))
     }
   }, [lastExtractedResult])
 
+  const handleFieldChange = (key, value) => {
+    setFields((prev) => ({
+      ...prev,
+      [key]: {
+        ...(prev[key] || { confidence: 0.85 }),
+        value,
+      },
+    }))
+  }
+
   const handleReset = () => {
-    setFormState({
-      villageCode: 'MH-PN-SH-0042',
-      khasraNumber: '248',
-      ownerName: 'Ramesh Baburao Patil',
-      area: '1.25',
-      notes: '',
-    })
+    if (lastExtractedResult) {
+      const raw = lastExtractedResult.extractedFields || {}
+      const scores = lastExtractedResult.confidenceScores || {}
+      const normalized = normalizeExtractedFields(raw, scores)
+      setFields({
+        ...DEFAULT_EXTRACTION_DATA.extractedFields,
+        ...normalized,
+        area: normalized.area || normalized.landArea || DEFAULT_EXTRACTION_DATA.extractedFields.area,
+      })
+    } else {
+      setFields(DEFAULT_EXTRACTION_DATA.extractedFields)
+    }
+    setNotes('')
     setIsSaved(false)
   }
 
@@ -54,12 +134,15 @@ export default function VerificationPage() {
       // Call backend API PATCH /api/records/{recordId}/verify
       await recordsApi.verifyRecord(recordId, {
         correctedFields: {
-          khasraNumber: formState.khasraNumber,
-          ownerName: formState.ownerName,
-          landArea: formState.area,
+          villageCode: fields.villageCode?.value,
+          khasraNumber: fields.khasraNumber?.value,
+          ownerName: fields.ownerName?.value,
+          landArea: fields.area?.value,
+          khataNumber: fields.khataNumber?.value,
+          assessment: fields.assessment?.value,
         },
         approved: true,
-        notes: formState.notes,
+        notes,
       })
     } catch (err) {
       console.warn('Backend API record verification fallback:', err)
@@ -172,7 +255,7 @@ export default function VerificationPage() {
                       <td className="border border-gray-300 p-2 font-bold relative">
                         <span className="opacity-40 line-through mr-2">२४B</span>
                         <span className="text-amber-700 bg-amber-50 px-1 rounded border border-amber-300">
-                          {formState.khasraNumber}
+                          {fields.khasraNumber?.value || '248'}
                         </span>
                       </td>
                     </tr>
@@ -193,13 +276,13 @@ export default function VerificationPage() {
                       <th className="border border-gray-300 p-2 bg-gray-50 w-1/3">
                         खातेदाराचे नाव
                       </th>
-                      <td className="border border-gray-300 p-2">{formState.ownerName}</td>
+                      <td className="border border-gray-300 p-2">{fields.ownerName?.value || 'Ramesh Baburao Patil'}</td>
                     </tr>
                     <tr>
                       <th className="border border-gray-300 p-2 bg-gray-50">
                         क्षेत्र (हेक्टर.आर)
                       </th>
-                      <td className="border border-gray-300 p-2">{formState.area}</td>
+                      <td className="border border-gray-300 p-2">{fields.area?.value || '1.25'}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -265,17 +348,20 @@ export default function VerificationPage() {
             </div>
 
             <form className="flex flex-col gap-5" onSubmit={(e) => e.preventDefault()}>
-              {/* Standard Field */}
+              {/* Field 1: Village Code */}
               <div>
-                <label className="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">
-                  Village Code
-                </label>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="block font-label-sm text-label-sm text-on-surface-variant">
+                    Village Code
+                  </label>
+                  <ConfidenceBadge confidence={fields.villageCode?.confidence} />
+                </div>
                 <div className="relative">
                   <input
                     className="w-full bg-surface-container-low border border-[#B8D8EE] rounded-lg px-4 py-2.5 text-on-surface font-body-md focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent text-gray-500 cursor-not-allowed"
                     readOnly
                     type="text"
-                    value={formState.villageCode}
+                    value={fields.villageCode?.value || ''}
                   />
                   <span
                     className="material-symbols-outlined absolute right-3 top-2.5 text-primary-container"
@@ -286,32 +372,49 @@ export default function VerificationPage() {
                 </div>
               </div>
 
-              {/* Flagged Field (Khasra Number) */}
-              <div className="bg-amber-50/50 -mx-4 px-4 py-4 rounded-lg border border-amber-200/50 relative">
-                <div className="flex justify-between items-end mb-1.5">
+              {/* Field 2: Flagged / Verified Field (Khasra Number) */}
+              <div
+                className={cn(
+                  "-mx-4 px-4 py-4 rounded-lg border relative transition-all",
+                  (fields.khasraNumber?.confidence ?? 1) < 0.7
+                    ? "bg-amber-50/50 border-amber-200/50"
+                    : "bg-surface-container-low/20 border-[#B8D8EE]"
+                )}
+              >
+                <div className="flex justify-between items-center mb-1.5">
                   <label className="block font-label-sm text-label-sm text-on-surface font-semibold">
                     Khasra Number (Survey No.)
                   </label>
-                  <span className="text-amber-600 text-xs font-semibold flex items-center gap-1">
-                    <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>
-                      warning
-                    </span>
-                    ⚠ Flagged for low confidence (42%)
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {(fields.khasraNumber?.confidence ?? 1) < 0.7 && (
+                      <span className="text-amber-600 text-xs font-semibold flex items-center gap-1">
+                        <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>
+                          warning
+                        </span>
+                        Flagged
+                      </span>
+                    )}
+                    <ConfidenceBadge confidence={fields.khasraNumber?.confidence} />
+                  </div>
                 </div>
                 <div className="relative group">
                   <input
-                    className="w-full bg-white border-2 border-amber-400 rounded-lg px-4 py-2.5 text-on-surface font-body-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 shadow-sm transition-shadow"
+                    className={cn(
+                      "w-full bg-white rounded-lg px-4 py-2.5 text-on-surface font-body-md focus:outline-none shadow-sm transition-all",
+                      (fields.khasraNumber?.confidence ?? 1) < 0.7
+                        ? "border-2 border-amber-400 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                        : "border border-[#B8D8EE] focus:ring-2 focus:ring-primary-container focus:border-transparent"
+                    )}
                     type="text"
-                    value={formState.khasraNumber}
-                    onChange={(e) => setFormState({ ...formState, khasraNumber: e.target.value })}
+                    value={fields.khasraNumber?.value || ''}
+                    onChange={(e) => handleFieldChange('khasraNumber', e.target.value)}
                   />
                   <div className="absolute right-2 top-1.5 flex gap-1">
                     <button
                       className="p-1 text-gray-400 hover:text-primary transition-colors rounded cursor-pointer"
                       title="Accept Original OCR (24B)"
                       type="button"
-                      onClick={() => setFormState({ ...formState, khasraNumber: '24B' })}
+                      onClick={() => handleFieldChange('khasraNumber', '24B')}
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
                         history
@@ -324,28 +427,66 @@ export default function VerificationPage() {
                 </p>
               </div>
 
-              {/* Standard Fields Grid */}
+              {/* Standard Fields Grid: Farmer/Owner Name & Area/Quantity */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                 <div>
-                  <label className="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">
-                    Owner Name
-                  </label>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="block font-label-sm text-label-sm text-on-surface-variant">
+                      Farmer / Owner Name
+                    </label>
+                    <ConfidenceBadge confidence={fields.ownerName?.confidence} />
+                  </div>
                   <input
                     className="w-full bg-white border border-[#B8D8EE] rounded-lg px-4 py-2.5 text-on-surface font-body-md focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent transition-all"
                     type="text"
-                    value={formState.ownerName}
-                    onChange={(e) => setFormState({ ...formState, ownerName: e.target.value })}
+                    value={fields.ownerName?.value || ''}
+                    onChange={(e) => handleFieldChange('ownerName', e.target.value)}
                   />
                 </div>
                 <div>
-                  <label className="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">
-                    Area (Hectares)
-                  </label>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="block font-label-sm text-label-sm text-on-surface-variant">
+                      Area (Hectares) / Quantity
+                    </label>
+                    <ConfidenceBadge confidence={fields.area?.confidence} />
+                  </div>
                   <input
                     className="w-full bg-white border border-[#B8D8EE] rounded-lg px-4 py-2.5 text-on-surface font-body-md focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent transition-all"
                     type="text"
-                    value={formState.area}
-                    onChange={(e) => setFormState({ ...formState, area: e.target.value })}
+                    value={fields.area?.value || ''}
+                    onChange={(e) => handleFieldChange('area', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Additional Extracted Fields Grid: Khata Number & Revenue Assessment */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="block font-label-sm text-label-sm text-on-surface-variant">
+                      Khata Number (Account No.)
+                    </label>
+                    <ConfidenceBadge confidence={fields.khataNumber?.confidence} />
+                  </div>
+                  <input
+                    className="w-full bg-white border border-[#B8D8EE] rounded-lg px-4 py-2.5 text-on-surface font-body-md focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent transition-all"
+                    type="text"
+                    value={fields.khataNumber?.value || ''}
+                    onChange={(e) => handleFieldChange('khataNumber', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="block font-label-sm text-label-sm text-on-surface-variant">
+                      Revenue Assessment / Price
+                    </label>
+                    <ConfidenceBadge confidence={fields.assessment?.confidence} />
+                  </div>
+                  <input
+                    className="w-full bg-white border border-[#B8D8EE] rounded-lg px-4 py-2.5 text-on-surface font-body-md focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent transition-all"
+                    type="text"
+                    value={fields.assessment?.value || ''}
+                    onChange={(e) => handleFieldChange('assessment', e.target.value)}
                   />
                 </div>
               </div>
@@ -358,8 +499,8 @@ export default function VerificationPage() {
                   className="w-full bg-white border border-[#B8D8EE] rounded-lg px-4 py-2.5 text-on-surface font-body-md focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent transition-all resize-none"
                   placeholder="Add context for manual correction..."
                   rows={3}
-                  value={formState.notes}
-                  onChange={(e) => setFormState({ ...formState, notes: e.target.value })}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
                 ></textarea>
               </div>
             </form>
@@ -410,18 +551,18 @@ export default function VerificationPage() {
         onClose={() => setIsPdfModalOpen(false)}
         recordData={{
           recordId: recordId,
-          khasraNumber: formState.khasraNumber,
-          khataNumber: '582',
-          ownerName: formState.ownerName,
-          ownerNameEn: formState.ownerName,
-          village: 'खडकवासला',
-          villageEn: 'Khadakwasla',
-          tehsil: 'हवेली',
-          tehsilEn: 'Haveli',
-          district: 'पुणे',
-          districtEn: 'Pune',
-          landArea: `${formState.area} हेक्टर`,
-          landAreaEn: `${formState.area} Hectares`,
+          khasraNumber: fields.khasraNumber?.value || '248',
+          khataNumber: fields.khataNumber?.value || '582',
+          ownerName: fields.ownerName?.value || 'Ramesh Baburao Patil',
+          ownerNameEn: fields.ownerName?.value || 'Ramesh Baburao Patil',
+          village: fields.village?.value || 'खडकवासला',
+          villageEn: fields.villageEn?.value || 'Khadakwasla',
+          tehsil: fields.tehsil?.value || 'हवेली',
+          tehsilEn: fields.tehsilEn?.value || 'Haveli',
+          district: fields.district?.value || 'पुणे',
+          districtEn: fields.districtEn?.value || 'Pune',
+          landArea: `${fields.area?.value || '1.25'} हेक्टर`,
+          landAreaEn: `${fields.area?.value || '1.25'} Hectares`,
         }}
         onConfirmExport={(lang) => {
           console.log(`[PDF Generator] Certificate generated directly in ${lang} language`)
