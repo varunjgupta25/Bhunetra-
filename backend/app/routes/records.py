@@ -18,6 +18,7 @@ from app.schemas.common import UserRole, VerificationStatus, AuditAction, QueueP
 from app.schemas.record import LandRecord, LandRecordListResponse, DuplicateDetectionResponse, DuplicateRecordGroup
 from app.schemas.verification import VerificationPatchRequest, VerificationQueueItem, VerificationQueueResponse
 from app.services.validation_rules import validator
+from app.services.synthetic_land_db import synthetic_land_db, synthetic_record_to_land_record
 
 logger = logging.getLogger("bhunetra.routes.records")
 router = APIRouter(prefix="/api/records", tags=["Records"])
@@ -29,32 +30,72 @@ async def list_records(
     village: Optional[str] = Query(None, description="Filter by Village"),
     status: Optional[str] = Query(None, description="Filter by Verification Status (e.g. auto-approved, pending-review, verified)"),
     minConfidence: Optional[float] = Query(None, description="Minimum overall confidence (0.0 - 1.0)"),
+    limit: int = Query(50, ge=1, le=1000, description="Max number of records to return"),
+    offset: int = Query(0, ge=0, description="Number of records to skip"),
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """
     Retrieves a list of digitized land records with optional multi-criteria filtering.
+    Integrates Synthetic Land Database (Mahabhulekh SQLite) alongside uploaded Firestore records.
     """
-    db = get_db()
-    records_ref = db.collection("records")
-    snapshots = records_ref.get()
+    records: List[LandRecord] = []
+    seen_ids = set()
 
-    records = []
-    for snap in snapshots:
-        data = snap.to_dict()
-        
-        # Apply query filters
-        if district and str(data.get("district", "")).lower() != district.lower():
-            continue
-        if village and str(data.get("village", "")).lower() != village.lower():
-            continue
-        if status and str(data.get("verificationStatus", "")).lower() != status.lower():
-            continue
-        if minConfidence is not None and float(data.get("overallConfidence", 0.0)) < minConfidence:
+    # 1. Fetch matching uploaded/digitized records from Firestore if available
+    try:
+        db = get_db()
+        records_ref = db.collection("records")
+        snapshots = records_ref.get()
+
+        for snap in snapshots:
+            data = snap.to_dict()
+            rec_id = data.get("recordId", snap.id)
+
+            # Apply query filters
+            if district and str(data.get("district", "")).lower() != district.lower():
+                continue
+            if village and str(data.get("village", "")).lower() != village.lower():
+                continue
+            if status and str(data.get("verificationStatus", "")).lower() != status.lower():
+                continue
+            if minConfidence is not None and float(data.get("overallConfidence", 0.0)) < minConfidence:
+                continue
+
+            records.append(LandRecord(**data))
+            seen_ids.add(rec_id)
+    except Exception as e:
+        logger.warning(f"Error querying Firestore records collection: {e}")
+
+    # 2. Query Synthetic Land Database (SQLite 1M indexed / in-memory fallback)
+    syn_rows, syn_total = synthetic_land_db.query_records(
+        district=district,
+        village=village,
+        limit=limit,
+        offset=offset
+    )
+
+    for row in syn_rows:
+        land_rec = synthetic_record_to_land_record(row)
+        if land_rec.recordId in seen_ids:
             continue
 
-        records.append(LandRecord(**data))
+        # Status filter check
+        if status and land_rec.verificationStatus.value.lower() != status.lower():
+            continue
 
-    return LandRecordListResponse(total=len(records), records=records)
+        # Confidence filter check
+        if minConfidence is not None and land_rec.overallConfidence < minConfidence:
+            continue
+
+        records.append(land_rec)
+        seen_ids.add(land_rec.recordId)
+        if len(records) >= limit:
+            break
+
+    # Calculate total count representing total matching items
+    total_count = max(len(records), syn_total) if not (status and status.lower() != "verified") else len(records)
+
+    return LandRecordListResponse(total=total_count, records=records[:limit])
 
 
 @router.get("/duplicates", response_model=DuplicateDetectionResponse, summary="Detect Duplicate Khasra/Khata Records")
@@ -173,19 +214,22 @@ async def get_record(
     db = get_db()
     snap = db.collection("records").document(recordId).get()
     
-    if not snap.exists:
-        raise HTTPException(status_code=404, detail=f"Record '{recordId}' not found.")
+    if snap.exists:
+        data = snap.to_dict()
+        # Retrieve associated document URL
+        doc_id = data.get("docId")
+        if doc_id:
+            doc_snap = db.collection("documents").document(doc_id).get()
+            if doc_snap.exists:
+                data["documentUrl"] = doc_snap.to_dict().get("storageUrl")
+        return LandRecord(**data)
 
-    data = snap.to_dict()
+    # Fallback to Synthetic Land Database
+    syn_record = synthetic_land_db.get_record_by_id(recordId)
+    if syn_record:
+        return synthetic_record_to_land_record(syn_record)
 
-    # Retrieve associated document URL
-    doc_id = data.get("docId")
-    if doc_id:
-        doc_snap = db.collection("documents").document(doc_id).get()
-        if doc_snap.exists:
-            data["documentUrl"] = doc_snap.to_dict().get("storageUrl")
-
-    return LandRecord(**data)
+    raise HTTPException(status_code=404, detail=f"Record '{recordId}' not found.")
 
 
 @router.patch("/{recordId}/verify", response_model=LandRecord, summary="Human Verifier Correction & Approval")
@@ -271,10 +315,15 @@ async def export_record_pdf(
     db = get_db()
     snap = db.collection("records").document(recordId).get()
     
-    if not snap.exists:
-        raise HTTPException(status_code=404, detail=f"Record '{recordId}' not found.")
-
-    data = snap.to_dict()
+    if snap.exists:
+        data = snap.to_dict()
+    else:
+        syn_record = synthetic_land_db.get_record_by_id(recordId)
+        if syn_record:
+            lr = synthetic_record_to_land_record(syn_record)
+            data = lr.model_dump()
+        else:
+            raise HTTPException(status_code=404, detail=f"Record '{recordId}' not found.")
     valid_codes = ["mr", "hi", "en", "bn", "ta", "te", "kn", "ml", "gu", "pa", "or", "as", "ur", "sa", "ks", "sd", "ne", "kok", "doi", "mni", "sat", "brx", "mai"]
     lang_code = lang.lower() if lang.lower() in valid_codes else "mr"
 

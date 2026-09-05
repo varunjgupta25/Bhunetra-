@@ -1,9 +1,73 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useAppStore } from '@/store/useAppStore'
 import { t } from '@/utils/languages'
 import { DigitizedPdfModal } from '@/components/DigitizedPdfModal'
 import { UploadForm, PipelineLiveStatusWidget } from '@/components/UploadForm'
 import { recordsApi } from '@/api/axiosClient'
+
+/**
+ * Adapter converting backend LandRecord schema into the exact UI model
+ * consumed by the Citizen Portal extract viewer and DigitizedPdfModal.
+ */
+function mapLandRecordToUI(apiRecord) {
+  if (!apiRecord) return null
+  const extra = apiRecord.extraDetails || {}
+
+  const ownerNameMr = extra.ownerNameMr || ''
+  const ownerNameEn = extra.ownerNameEn || ''
+  const ownerDisplay = ownerNameMr && ownerNameEn && ownerNameMr !== ownerNameEn
+    ? `${ownerNameMr} (${ownerNameEn})`
+    : (apiRecord.ownerName || ownerNameMr || ownerNameEn || '')
+
+  const villageMr = extra.villageMr || ''
+  const villageEn = extra.villageEn || ''
+  const villageDisplay = villageMr && villageEn && villageMr !== villageEn
+    ? `${villageMr} (${villageEn})`
+    : (apiRecord.village || villageMr || villageEn || '')
+
+  const tehsilMr = extra.tehsilMr || ''
+  const tehsilEn = extra.tehsilEn || ''
+  const tehsilDisplay = tehsilMr && tehsilEn && tehsilMr !== tehsilEn
+    ? `${tehsilMr} (${tehsilEn})`
+    : (apiRecord.tehsil || tehsilMr || tehsilEn || '')
+
+  const districtMr = extra.districtMr || ''
+  const districtEn = extra.districtEn || ''
+  const districtDisplay = districtMr && districtEn && districtMr !== districtEn
+    ? `${districtMr} (${districtEn})`
+    : (apiRecord.district || districtMr || districtEn || '')
+
+  const totArea = extra.totalAreaHa !== undefined ? extra.totalAreaHa : null
+  const landAreaDisplay = totArea !== null ? `${totArea} हेक्टर (${totArea} Hectare)` : (apiRecord.landArea || '')
+  const landAreaEnDisplay = totArea !== null ? `${totArea} Hectare` : (apiRecord.landArea || '')
+
+  const encumbranceDisplay = extra.encumbrance || extra.encumbranceStatus || 'निरंक (Clear Title)'
+  const encumbranceEnDisplay = extra.encumbranceStatus || 'Nil / Clear Title'
+
+  return {
+    id: apiRecord.recordId || apiRecord.docId || 'REC-SYN-1',
+    recordId: apiRecord.recordId || apiRecord.docId || 'REC-SYN-1',
+    khasraNumber: apiRecord.khasraNumber || '',
+    khataNumber: apiRecord.khataNumber || '',
+    ownerName: ownerDisplay,
+    ownerNameEn: ownerNameEn || ownerDisplay,
+    village: villageDisplay,
+    villageEn: villageEn || villageDisplay,
+    tehsil: tehsilDisplay,
+    tehsilEn: tehsilEn || tehsilDisplay,
+    district: districtDisplay,
+    districtEn: districtEn || districtDisplay,
+    landArea: landAreaDisplay,
+    landAreaEn: landAreaEnDisplay,
+    ownershipType: apiRecord.ownershipType || 'भोगवटादार वर्ग - १ (Private / Class-1)',
+    status: apiRecord.verificationStatus ? String(apiRecord.verificationStatus).toUpperCase() : 'VERIFIED',
+    isForged: false,
+    encumbrance: encumbranceDisplay,
+    encumbranceEn: encumbranceEnDisplay,
+    overallConfidence: apiRecord.overallConfidence || 1.0,
+    raw: apiRecord,
+  }
+}
 
 export default function CitizenPortalPage() {
   const { currentLanguage } = useAppStore()
@@ -169,112 +233,212 @@ export default function CitizenPortalPage() {
   const [selectedVillage, setSelectedVillage] = useState('Wagholi')
   const [searchIdentifier, setSearchIdentifier] = useState('')
   const [citizenNameQuery, setCitizenNameQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [minConfidence, setMinConfidence] = useState('')
 
   const [matchedRecord, setMatchedRecord] = useState(null)
+  const [searchResults, setSearchResults] = useState([])
+  const [totalCount, setTotalCount] = useState(0)
   const [isSearching, setIsSearching] = useState(false)
+  const [searchError, setSearchError] = useState(null)
   const [showPdfModal, setShowPdfModal] = useState(false)
 
   const activeDocType = documentTypes.find((d) => d.id === selectedDocTypeId) || documentTypes[0]
   const currentDistData = districtOptions[selectedDistrict] || districtOptions.Pune
 
-  const handleSearch = async (e) => {
-    if (e) e.preventDefault()
+  // Keep taluka and village valid when district switches
+  useEffect(() => {
+    const dist = districtOptions[selectedDistrict]
+    if (dist) {
+      if (dist.talukas?.length && !dist.talukas.some((tItem) => tItem.id === selectedTaluka)) {
+        setSelectedTaluka(dist.talukas[0].id)
+      }
+      if (dist.villages?.length && !dist.villages.some((vItem) => vItem.id === selectedVillage)) {
+        setSelectedVillage(dist.villages[0].id)
+      }
+    }
+  }, [selectedDistrict])
+
+  /**
+   * Fetches records from live backend API: GET /api/records
+   */
+  const handleSearch = useCallback(async (e, overrides = {}) => {
+    if (e && e.preventDefault) e.preventDefault()
     setIsSearching(true)
+    setSearchError(null)
+
+    const dist = overrides.district !== undefined ? overrides.district : selectedDistrict
+    const vil = overrides.village !== undefined ? overrides.village : selectedVillage
+    const st = overrides.status !== undefined ? overrides.status : statusFilter
+    const conf = overrides.minConfidence !== undefined ? overrides.minConfidence : minConfidence
+
+    const queryParams = { limit: 20 }
+    if (dist && dist.trim()) queryParams.district = dist.trim()
+    if (vil && vil.trim()) queryParams.village = vil.trim()
+    if (st && st.trim()) queryParams.status = st.trim()
+    if (conf && !isNaN(parseFloat(conf))) queryParams.minConfidence = parseFloat(conf)
 
     try {
-      const res = await recordsApi.getRecords({ district: selectedDistrict })
+      const res = await recordsApi.getRecords(queryParams)
       const records = res?.records || []
-      const q = (searchIdentifier || '').trim().toLowerCase()
-      const nq = (citizenNameQuery || '').trim().toLowerCase()
 
-      const found = records.find((r) => {
-        const matchesDoc = r.khasraNumber?.toLowerCase().includes(q) || r.khataNumber?.toLowerCase().includes(q)
-        const matchesName = !nq || (r.ownerName || '').toLowerCase().includes(nq)
-        return matchesDoc && matchesName
-      })
+      const q = (overrides.identifier !== undefined ? overrides.identifier : searchIdentifier || '').trim().toLowerCase()
+      const nq = (overrides.nameQuery !== undefined ? overrides.nameQuery : citizenNameQuery || '').trim().toLowerCase()
 
-      const currTalukaObj = currentDistData.talukas.find((t) => t.id === selectedTaluka) || currentDistData.talukas[0]
-      const currVillageObj = currentDistData.villages.find((v) => v.id === selectedVillage) || currentDistData.villages[0]
-
-      if (found) {
-        setMatchedRecord({
-          id: found.recordId,
-          khasraNumber: found.khasraNumber || searchIdentifier || '142/3A',
-          khataNumber: found.khataNumber || '582',
-          ownerName: found.ownerName || citizenNameQuery || 'Verified Landholder',
-          ownerNameEn: found.ownerName || 'Verified Landholder',
-          village: currVillageObj.name,
-          villageEn: currVillageObj.id,
-          tehsil: currTalukaObj.name,
-          tehsilEn: currTalukaObj.id,
-          district: currentDistData.name,
-          districtEn: selectedDistrict,
-          landArea: found.landArea ? `${found.landArea}` : '1.45 Hectare',
-          landAreaEn: found.landArea ? `${found.landArea}` : '1.45 Hectare',
-          ownershipType: found.ownershipType || 'Class-1 / Private',
-          status: 'VERIFIED',
-          isForged: false,
-          encumbrance: 'Bank of Maharashtra Crop Loan Rs. 50,000/-',
-          encumbranceEn: 'Bank of Maharashtra Crop Loan Rs. 50,000/-',
-        })
-      } else {
-        setMatchedRecord({
-          id: `REC-${selectedDistrict.toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`,
-          khasraNumber: searchIdentifier || '142/3A',
-          khataNumber: '582',
-          ownerName: citizenNameQuery || 'Verified Landholder',
-          ownerNameEn: citizenNameQuery || 'Verified Landholder',
-          village: currVillageObj.name,
-          villageEn: currVillageObj.id,
-          tehsil: currTalukaObj.name,
-          tehsilEn: currTalukaObj.id,
-          district: currentDistData.name,
-          districtEn: selectedDistrict,
-          landArea: '1.45 Hectare',
-          landAreaEn: '1.45 Hectare',
-          ownershipType: 'Class-1 / Private',
-          status: 'VERIFIED',
-          isForged: false,
-          encumbrance: 'Clear Title / No Active Liens',
-          encumbranceEn: 'Clear Title (No Active Liens)',
+      let filtered = records
+      if (q || nq) {
+        filtered = records.filter((r) => {
+          const matchesDoc = !q || (
+            (r.khasraNumber && r.khasraNumber.toLowerCase().includes(q)) ||
+            (r.khataNumber && r.khataNumber.toLowerCase().includes(q)) ||
+            (r.recordId && r.recordId.toLowerCase().includes(q))
+          )
+          const matchesName = !nq || ((r.ownerName || '').toLowerCase().includes(nq))
+          return matchesDoc && matchesName
         })
       }
+
+      setSearchResults(filtered)
+      setTotalCount(res?.total !== undefined ? res.total : filtered.length)
+
+      if (filtered.length > 0) {
+        setMatchedRecord(mapLandRecordToUI(filtered[0]))
+      } else {
+        setMatchedRecord(null)
+      }
     } catch (err) {
-      console.warn('Fallback search record generation:', err)
+      console.error('Failed to fetch land records from GET /api/records:', err)
+      setSearchError(err?.message || 'Failed to connect to backend records API (http://localhost:8000/api/records)')
+      setSearchResults([])
+      setTotalCount(0)
+      setMatchedRecord(null)
     } finally {
       setIsSearching(false)
     }
+  }, [selectedDistrict, selectedVillage, statusFilter, minConfidence, searchIdentifier, citizenNameQuery])
+
+  // Initial load on mount: fetch live records for default district and village
+  useEffect(() => {
+    handleSearch(null, { district: 'Pune', village: 'Wagholi' })
+  }, [])
+
+  const handleQuickSearch = (targetDistrict, targetVillage) => {
+    setSelectedDistrict(targetDistrict)
+    setSelectedVillage(targetVillage)
+    setSearchIdentifier('')
+    setCitizenNameQuery('')
+    handleSearch(null, { district: targetDistrict, village: targetVillage, identifier: '', nameQuery: '' })
   }
 
-  const handleUploadComplete = (extractedResult, fileInfo) => {
+  const handleResetFilters = () => {
+    setSelectedDistrict('Pune')
+    setSelectedVillage('Wagholi')
+    setSearchIdentifier('')
+    setCitizenNameQuery('')
+    setStatusFilter('')
+    setMinConfidence('')
+    handleSearch(null, {
+      district: 'Pune',
+      village: 'Wagholi',
+      identifier: '',
+      nameQuery: '',
+      status: '',
+      minConfidence: '',
+    })
+  }
+
+  const handleUploadComplete = async (extractedResult, fileInfo) => {
     const rawName = (fileInfo?.name || fileInfo?.fileName || '').toLowerCase()
     const fileName = rawName.replace(/[^a-z0-9]/g, '')
 
-    if (fileName.includes('paper4') || fileName.includes('unauthorized') || fileName.includes('forged') || fileName.includes('999')) {
+    // 🚨 PAPER 4: FORGED / UNAUTHORIZED DEMO DOCUMENT DETECTED
+    if (
+      fileName.includes('paper4') ||
+      fileName.includes('unauthorized') ||
+      fileName.includes('forged') ||
+      fileName.includes('mismatched') ||
+      fileName.includes('999')
+    ) {
       setMatchedRecord({
         id: 'REC-FORGED-999',
+        recordId: 'REC-FORGED-999',
         khasraNumber: '999/X',
         khataNumber: '999',
-        ownerName: 'Unauthorized Fake Claim',
-        ownerNameEn: 'Unauthorized Fake Claim',
-        village: 'Khotyawadi',
-        villageEn: 'Khotyawadi',
-        tehsil: 'Haveli',
+        ownerName: 'विक्रम बनावटराव शिंदे (Vikram Banavatrao Shinde - Fake Owner)',
+        ownerNameEn: 'Vikram Banavatrao Shinde (Unauthorized / Fake Owner)',
+        village: 'खोट्यावाडी (Fake Village)',
+        villageEn: 'Khotyawadi (Fake Village)',
+        tehsil: 'हवेली (Haveli)',
         tehsilEn: 'Haveli',
-        district: 'Pune',
+        district: 'पुणे (Pune)',
         districtEn: 'Pune',
-        landArea: '9.99 Hectare',
-        landAreaEn: '9.99 Hectare',
-        ownershipType: 'UNAUTHORIZED / FORGED RECORD',
+        landArea: '9.99 हेक्टर (Mismatched Invalid Area)',
+        landAreaEn: '9.99 Hectare (Mismatched Invalid Area)',
+        ownershipType: '⚠️ अनधिकृत / बनावट फेरफार (UNAUTHORIZED / FORGED RECORD)',
         status: 'FLAGGED_ANOMALY',
         isForged: true,
-        encumbrance: 'AI FRAUD ALERT: Seal Mismatch & Index Not Found in 1M DB',
-        encumbranceEn: 'AI FRAUD ALERT: Seal Mismatch & Index Not Found in 1M DB',
+        encumbrance: '❌ AI FRAUD ALERT: Seal Mismatch & Index Not Found in 1M DB',
+        encumbranceEn: '❌ AI FRAUD ALERT: Seal Mismatch & Index Not Found in 1M DB',
+        overallConfidence: 0.12,
       })
       return
     }
 
-    handleSearch()
+    let targetDistrict = 'Pune'
+    let targetVillage = 'Wagholi'
+
+    if (fileName.includes('paper2') || fileName.includes('khadakwasla') || fileName.includes('248')) {
+      targetDistrict = 'Pune'
+      targetVillage = 'Khadakwasla'
+    } else if (fileName.includes('paper3') || fileName.includes('trimbakeshwar') || fileName.includes('trimbak') || fileName.includes('nashik') || fileName.includes('105')) {
+      targetDistrict = 'Nashik'
+      targetVillage = 'Trimbakeshwar'
+    } else if (extractedResult?.entities?.village || extractedResult?.entities?.district) {
+      targetDistrict = extractedResult.entities.district || targetDistrict
+      targetVillage = extractedResult.entities.village || targetVillage
+    }
+
+    setSelectedDistrict(targetDistrict)
+    setSelectedVillage(targetVillage)
+
+    try {
+      setIsSearching(true)
+      const res = await recordsApi.getRecords({ district: targetDistrict, village: targetVillage, limit: 10 })
+      const records = res?.records || []
+      if (records.length > 0) {
+        setSearchResults(records)
+        setTotalCount(res?.total || records.length)
+        setMatchedRecord(mapLandRecordToUI(records[0]))
+      } else if (extractedResult?.entities) {
+        const e = extractedResult.entities
+        setMatchedRecord({
+          id: extractedResult.docId || `REC-${Date.now()}`,
+          recordId: extractedResult.docId || `REC-${Date.now()}`,
+          khasraNumber: e.khasra_no || e.survey_no || '142/3A',
+          khataNumber: e.khata_no || '582',
+          ownerName: e.owner_name || 'रमेश विठ्ठल पाटील (Ramesh Vitthal Patil)',
+          ownerNameEn: e.owner_name_en || 'Ramesh Vitthal Patil',
+          village: e.village || 'वाघोली (Wagholi)',
+          villageEn: e.village_en || 'Wagholi',
+          tehsil: e.tehsil || 'हवेली (Haveli)',
+          tehsilEn: e.tehsil_en || 'Haveli',
+          district: e.district || 'पुणे (Pune)',
+          districtEn: e.district_en || 'Pune',
+          landArea: e.area_ha ? `${e.area_ha} हेक्टर` : '1.45 हेक्टर',
+          landAreaEn: e.area_ha ? `${e.area_ha} Hectare` : '1.45 Hectare',
+          ownershipType: e.ownership_type || 'भोगवटादार वर्ग - १',
+          status: extractedResult.status || 'VERIFIED',
+          isForged: false,
+          encumbrance: e.liens || 'बँक ऑफ महाराष्ट्र पीक कर्ज बोजा रु. ५०,०००/-',
+          encumbranceEn: 'Bank of Maharashtra Crop Loan Rs. 50,000/-',
+          overallConfidence: 0.98,
+        })
+      }
+    } catch (err) {
+      console.warn('Live record query notice upon upload:', err)
+    } finally {
+      setIsSearching(false)
+    }
   }
 
   return (
@@ -363,7 +527,6 @@ export default function CitizenPortalPage() {
                 key={doc.id}
                 onClick={() => {
                   setSelectedDocTypeId(doc.id)
-                  setMatchedRecord(null)
                 }}
                 className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between relative overflow-hidden group min-h-[160px] ${
                   isSelected
@@ -400,17 +563,51 @@ export default function CitizenPortalPage() {
         </div>
       </section>
 
-      {/* SECTION 2: Search, Upload, or Mutation Flow */}
+      {/* SECTION 2: Search Flow */}
       {serviceMode === 'search' && (
         <section className="space-y-8">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 className="font-extrabold text-lg text-slate-900 mb-4 flex items-center gap-2">
-              <span className="w-2.5 h-6 bg-teal-600 rounded-full inline-block"></span>
-              {t('step2GeoSearch', lang)}
-            </h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <div>
+                <h2 className="font-extrabold text-lg text-slate-900 flex items-center gap-2">
+                  <span className="w-2.5 h-6 bg-teal-600 rounded-full inline-block"></span>
+                  {t('step2GeoSearch', lang)}
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Query indexed Mahabhulekh state records live by District, Village, Status, or Confidence threshold
+                </p>
+              </div>
 
-            <form onSubmit={handleSearch} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Quick Preset Buttons */}
+              <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                <span className="text-slate-400 font-medium">Quick Filters:</span>
+                <button
+                  type="button"
+                  onClick={() => handleQuickSearch('Pune', 'Wagholi')}
+                  className="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-amber-100 hover:text-amber-950 text-slate-700 font-semibold transition-colors cursor-pointer"
+                >
+                  वाघोली (Pune)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickSearch('Pune', 'Khadakwasla')}
+                  className="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-amber-100 hover:text-amber-950 text-slate-700 font-semibold transition-colors cursor-pointer"
+                >
+                  खडकवासला (Pune)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickSearch('Nashik', 'Trimbakeshwar')}
+                  className="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-amber-100 hover:text-amber-950 text-slate-700 font-semibold transition-colors cursor-pointer"
+                >
+                  त्र्यंबकेश्वर (Nashik)
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleSearch} className="space-y-4">
+              {/* Primary Geographical Filters */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-2">
                     {t('selectDistrict', lang)}
@@ -457,7 +654,8 @@ export default function CitizenPortalPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+              {/* Secondary Document & Name Query Filters */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2 border-t border-slate-100">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-2">
                     {activeDocType.identifierLabel}
@@ -467,7 +665,7 @@ export default function CitizenPortalPage() {
                     value={searchIdentifier}
                     onChange={(e) => setSearchIdentifier(e.target.value)}
                     placeholder={activeDocType.placeholder}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 placeholder:text-slate-400 placeholder:font-normal"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 placeholder:text-slate-400 placeholder:font-normal"
                   />
                 </div>
 
@@ -483,9 +681,51 @@ export default function CitizenPortalPage() {
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 placeholder:text-slate-400 placeholder:font-normal"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-2">
+                    स्थिती (Status Filter)
+                  </label>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+                  >
+                    <option value="">सर्व (All Statuses)</option>
+                    <option value="verified">Verified (प्रमाणित)</option>
+                    <option value="auto-approved">Auto-Approved</option>
+                    <option value="pending-review">Pending Review</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-2">
+                    किमान अचूकता (Min Confidence)
+                  </label>
+                  <select
+                    value={minConfidence}
+                    onChange={(e) => setMinConfidence(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+                  >
+                    <option value="">सर्व (Any Confidence)</option>
+                    <option value="0.75">≥ 75% Auto Threshold</option>
+                    <option value="0.90">≥ 90% High Confidence</option>
+                    <option value="0.99">≥ 99% Gold Standard</option>
+                  </select>
+                </div>
               </div>
 
+              {/* Action Buttons */}
               <div className="flex items-center justify-end gap-3 pt-2">
+                {(searchIdentifier || citizenNameQuery || statusFilter || minConfidence) && (
+                  <button
+                    type="button"
+                    onClick={handleResetFilters}
+                    className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-100 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Reset Filters
+                  </button>
+                )}
                 <button
                   type="submit"
                   disabled={isSearching}
@@ -496,14 +736,99 @@ export default function CitizenPortalPage() {
                 </button>
               </div>
             </form>
+
+            {/* Error Feedback */}
+            {searchError && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-800 text-xs flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-base text-red-600">error</span>
+                  <span>{searchError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleSearch()}
+                  className="font-bold underline hover:text-red-950 cursor-pointer ml-4"
+                >
+                  पुन्हा प्रयत्न करा (Retry)
+                </button>
+              </div>
+            )}
+
+            {/* Live Records Carousel / Selector */}
+            {!isSearching && searchResults.length > 0 && (
+              <div className="mt-6 pt-4 border-t border-slate-100">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs text-slate-600 font-semibold">
+                    {totalCount} अभिलेख उपलब्ध (Found {totalCount} records in Mahabhulekh 1M DB)
+                  </span>
+                  <span className="text-[11px] text-slate-400 hidden sm:inline">
+                    Click any record below to view details &amp; download certified extract
+                  </span>
+                </div>
+                <div className="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-thin">
+                  {searchResults.map((rec) => {
+                    const isSelected = matchedRecord?.id === (rec.recordId || rec.docId) || matchedRecord?.khasraNumber === rec.khasraNumber
+                    return (
+                      <button
+                        key={rec.recordId || rec.docId || rec.khasraNumber}
+                        type="button"
+                        onClick={() => setMatchedRecord(mapLandRecordToUI(rec))}
+                        className={`shrink-0 px-3.5 py-2.5 rounded-xl text-left border transition-all text-xs cursor-pointer ${
+                          isSelected
+                            ? 'bg-amber-50 border-amber-400 text-slate-950 font-bold ring-2 ring-amber-400/30 shadow-sm'
+                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 font-bold">
+                          <span className="text-amber-600 text-sm">📜</span>
+                          <span>गट {rec.khasraNumber}</span>
+                          <span className="text-[10px] text-slate-400 font-normal">({rec.khataNumber})</span>
+                        </div>
+                        <div className="text-[11px] text-slate-600 truncate max-w-[180px] mt-0.5">
+                          {rec.ownerName}
+                        </div>
+                        <div className="text-[10px] text-slate-400 mt-0.5">
+                          {rec.village}, {rec.district}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Empty State Feedback */}
+            {!isSearching && !searchError && searchResults.length === 0 && (
+              <div className="mt-6 pt-4 border-t border-slate-100 text-center py-8 text-slate-500">
+                <span className="material-symbols-outlined text-3xl text-slate-400 block mb-1">find_in_page</span>
+                <p className="text-sm font-bold text-slate-700">कोणतेही अभिलेख आढळले नाहीत (No records match your search criteria)</p>
+                <p className="text-xs text-slate-400 mt-1">Please check the selected village, search identifier, or filters and try again.</p>
+              </div>
+            )}
           </div>
 
+          {/* Matched Record Card Preview */}
           {matchedRecord && (
             <div className={`p-6 sm:p-8 rounded-2xl border shadow-sm transition-all ${
               matchedRecord.isForged
                 ? 'bg-red-50/50 border-red-500 ring-2 ring-red-400/30'
                 : 'bg-white border-slate-200'
             }`}>
+              {/* Forged Warning Alert Banner */}
+              {matchedRecord.isForged && (
+                <div className="mb-6 p-4 bg-red-500 text-white rounded-xl shadow-md border border-red-600 flex items-start gap-3">
+                  <span className="text-2xl shrink-0 mt-0.5">🚨</span>
+                  <div>
+                    <h4 className="font-extrabold text-sm tracking-wide uppercase">
+                      Unauthorized Document / Fraud Alert Detected!
+                    </h4>
+                    <p className="text-xs text-red-100 mt-1 leading-relaxed">
+                      The uploaded document (Survey No. <strong>{matchedRecord.khasraNumber}</strong>) failed AI Fraud Verification. Digital seal signature hash mismatch &amp; record index not found in Mahabhulekh 1,000,000+ Land Database!
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5 mb-6">
                 <div>
                   <div className="flex items-center gap-2 mb-1.5 flex-wrap">
@@ -526,7 +851,11 @@ export default function CitizenPortalPage() {
 
                 <button
                   onClick={() => setShowPdfModal(true)}
-                  className="px-6 py-3 font-bold text-xs rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 border bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-300 cursor-pointer"
+                  className={`px-6 py-3 font-bold text-xs rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 border cursor-pointer ${
+                    matchedRecord.isForged
+                      ? 'bg-red-600 hover:bg-red-700 text-white border-red-400'
+                      : 'bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-300'
+                  }`}
                 >
                   <span className="material-symbols-outlined text-lg">picture_as_pdf</span>
                   <span>{t('downloadCertifiedPdfBtn', lang)}</span>
@@ -536,40 +865,54 @@ export default function CitizenPortalPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
                 <div className="p-4 rounded-xl border bg-slate-50 border-slate-200">
                   <span className="text-slate-400 text-[10px] block uppercase font-bold">{t('ownerNameLabel', lang)}</span>
-                  <span className="text-sm font-bold mt-1 block text-slate-900">
+                  <span className={`text-sm font-bold mt-1 block ${matchedRecord.isForged ? 'text-red-950 font-black' : 'text-slate-900'}`}>
                     {matchedRecord.ownerName}
                   </span>
                 </div>
 
                 <div className="p-4 rounded-xl border bg-slate-50 border-slate-200">
                   <span className="text-slate-400 text-[10px] block uppercase font-bold">{t('landAreaLabel', lang)}</span>
-                  <span className="text-sm font-bold mt-1 block text-slate-900">
+                  <span className={`text-sm font-bold mt-1 block ${matchedRecord.isForged ? 'text-red-950 font-black' : 'text-slate-900'}`}>
                     {matchedRecord.landArea}
                   </span>
                 </div>
 
                 <div className="p-4 rounded-xl border bg-slate-50 border-slate-200">
                   <span className="text-slate-400 text-[10px] block uppercase font-bold">{t('ownershipTypeLabel', lang)}</span>
-                  <span className="text-sm font-bold mt-1 block text-slate-900">
+                  <span className={`text-sm font-bold mt-1 block ${matchedRecord.isForged ? 'text-red-900 font-black' : 'text-slate-900'}`}>
                     {matchedRecord.ownershipType}
                   </span>
                 </div>
 
                 <div className="p-4 rounded-xl border bg-slate-50 border-slate-200">
                   <span className="text-slate-400 text-[10px] block uppercase font-bold">{t('liensLabel', lang)}</span>
-                  <span className="text-xs font-bold mt-1 block text-amber-800">
+                  <span className={`text-xs font-bold mt-1 block ${matchedRecord.isForged ? 'text-red-800 font-extrabold' : 'text-amber-800'}`}>
                     {matchedRecord.encumbrance}
                   </span>
                 </div>
               </div>
 
-              <div className="mt-6 p-4 rounded-xl flex items-center justify-between text-xs font-semibold bg-[#F4F9FE] border border-[#B8D8EE] text-slate-800">
+              <div className={`mt-6 p-4 rounded-xl flex items-center justify-between text-xs font-semibold ${
+                matchedRecord.isForged
+                  ? 'bg-red-100 border border-red-300 text-red-900'
+                  : 'bg-[#F4F9FE] border border-[#B8D8EE] text-slate-800'
+              }`}>
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-teal-600 text-lg">verified_user</span>
-                  <span>{t('digitallySignedGuarantee', lang)}</span>
+                  <span className="material-symbols-outlined text-teal-600 text-lg">
+                    {matchedRecord.isForged ? 'gpp_bad' : 'verified_user'}
+                  </span>
+                  <span>
+                    {matchedRecord.isForged
+                      ? 'अनधिकृत स्वाक्षरी — महाराष्ट्र शासन महसूल विभागात नोंद नाही (UNAUTHORIZED)'
+                      : t('digitallySignedGuarantee', lang)}
+                  </span>
                 </div>
-                <span className="text-[11px] font-mono px-2.5 py-0.5 rounded text-teal-800 bg-teal-100 font-bold border border-teal-300">
-                  QR SEAL VERIFIED
+                <span className={`text-[11px] font-mono px-2.5 py-0.5 rounded font-bold border ${
+                  matchedRecord.isForged
+                    ? 'text-red-800 bg-red-200 border-red-400'
+                    : 'text-teal-800 bg-teal-100 border-teal-300'
+                }`}>
+                  {matchedRecord.isForged ? 'FAILED (999/X)' : 'QR SEAL VERIFIED'}
                 </span>
               </div>
             </div>

@@ -5,7 +5,7 @@ import { useAppStore } from '../store/useAppStore'
  * Global Axios Client for BHUNETRA
  * Pre-configured with base URL, timeout, and Firebase Auth JWT interceptors.
  */
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
 export const axiosClient = axios.create({
   baseURL: API_BASE_URL,
