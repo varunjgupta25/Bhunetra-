@@ -49,21 +49,13 @@ def clean_and_populate():
             if os.path.exists(svg_src):
                 shutil.copy2(svg_src, svg_dst)
                 
-            # Write HTML
-            html_content = generate_html_cert(cat, paper, p_idx)
-            html_dst = os.path.join(DEMO_PAPERS_DIR, f"{file_stem}.html")
-            with open(html_dst, "w", encoding="utf-8") as f:
-                f.write(html_content)
-                
             cat_links.append({
                 "stem": file_stem,
-                "html": f"{file_stem}.html",
                 "svg": f"{file_stem}.svg",
                 "title": paper["title"],
                 "is_forged": is_forged,
                 "confidence": paper["confidence"],
                 "authenticScore": paper["authenticScore"],
-                "extraDetails": paper.get("extraDetails", {})
             })
             
         index_links.append({
