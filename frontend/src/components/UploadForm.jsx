@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/useAppStore'
 import { documentApi } from '@/api/axiosClient'
+import { t } from '@/utils/languages'
 
 import { NonLandRecordModal } from '@/components/NonLandRecordModal'
 
@@ -48,14 +49,17 @@ export function PipelineLiveStatusWidget() {
     processingStep,
     uploadProgress,
     uploadStatusText,
+    currentLanguage,
   } = useAppStore()
+
+  const lang = currentLanguage || 'mr'
 
   return (
     <div className="bg-surface-container-lowest rounded-[20px] p-card-padding card-shadow border border-[#D0E8F5] flex flex-col justify-between">
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-headline-md text-headline-md text-[#0D2B40]">
-            Pipeline Live Status
+            {t('pipelineLiveStatusTitle', lang)}
           </h2>
           <div
             className={`flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium ${
@@ -90,7 +94,7 @@ export function PipelineLiveStatusWidget() {
         {/* Overall Progress Indicator */}
         <div className="mb-6 p-4 rounded-xl bg-[#F4F9FE] border border-[#D0E8F5]">
           <div className="flex justify-between font-label-sm text-xs mb-2 text-on-surface">
-            <span className="font-semibold">Overall Progress</span>
+            <span className="font-semibold">{t('overallProgressLabel', lang)}</span>
             <span className="font-bold text-primary">
               {isProcessing
                 ? `${uploadProgress}%`
@@ -119,7 +123,7 @@ export function PipelineLiveStatusWidget() {
               ✓
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-900">Storage Ingestion</p>
+              <p className="text-xs font-bold text-slate-900">{t('stepStorage', lang)}</p>
               <p className="text-[10px] text-slate-500">File encrypted</p>
             </div>
           </div>
@@ -130,7 +134,7 @@ export function PipelineLiveStatusWidget() {
               ✓
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-900">Multilingual OCR</p>
+              <p className="text-xs font-bold text-slate-900">{t('stepOcr', lang)}</p>
               <p className="text-[10px] text-slate-500">Marathi Extracted</p>
             </div>
           </div>
@@ -141,7 +145,7 @@ export function PipelineLiveStatusWidget() {
               {processingStep === 3 && isProcessing ? '🔄' : '✓'}
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-900">LLM Structuring</p>
+              <p className="text-xs font-bold text-slate-900">{t('stepStructuring', lang)}</p>
               <p className="text-[10px] text-slate-600">Schema Mapping</p>
             </div>
           </div>
@@ -152,7 +156,7 @@ export function PipelineLiveStatusWidget() {
               ✓
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-900">Validation</p>
+              <p className="text-xs font-bold text-slate-900">{t('stepValidation', lang)}</p>
               <p className="text-[10px] text-slate-600">Verified</p>
             </div>
           </div>
@@ -181,7 +185,10 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
     uploadError,
     setUploadError,
     resetUploadState,
+    currentLanguage,
   } = useAppStore()
+
+  const lang = currentLanguage || 'mr'
 
   // Form Configuration State
   const [documentCategory, setDocumentCategory] = useState('7/12 Extract')
@@ -259,35 +266,37 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      validateAndSetFile(e.dataTransfer.files[0])
+    const file = e.dataTransfer?.files?.[0]
+    if (file) {
+      validateAndSetFile(file)
     }
   }
 
   const handleFileSelect = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      validateAndSetFile(e.target.files[0])
+    const file = e.target.files?.[0]
+    if (file) {
+      validateAndSetFile(file)
     }
   }
 
   const handleRemoveFile = () => {
-    resetUploadState()
     setSelectedRawFile(null)
+    setCurrentFile(null)
     setFilePreviewUrl(null)
     setValidationError(null)
-    setUploadStatusText('Ready to ingest')
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
   }
 
   const handleCancelUpload = () => {
-    setIsUploading(false)
-    setIsProcessing(false)
-    setUploadProgress(0)
-    setProcessingStep(0)
-    setUploadStatusText('Upload cancelled by user')
+    resetUploadState()
+    setSelectedRawFile(null)
+    setFilePreviewUrl(null)
+    setValidationError(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
   }
 
   // --- MAIN DIGITIZATION PIPELINE ---
@@ -398,10 +407,10 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="font-headline-md text-headline-md text-[#0D2B40]">
-                Document Upload &amp; Ingestion
+                {t('uploadSectionTitle', lang)}
               </h2>
               <p className="text-sm text-on-surface-variant mt-0.5">
-                Direct cloud upload with automated OCR &amp; LLM extraction
+                {t('uploadSectionSubtitle', lang)}
               </p>
             </div>
             {isUploading && (
@@ -469,14 +478,14 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
 
             <p className="font-body-lg text-body-lg text-on-surface font-semibold">
               {dragActive
-                ? 'Drop file here to upload'
-                : 'Drag & drop scanned land record here'}
+                ? t('dragDropTitle', lang)
+                : t('dragDropTitle', lang)}
             </p>
             <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-              or click to browse from your device
+              {t('dragDropSub', lang)}
             </p>
             <p className="text-xs text-on-surface-variant mt-4 opacity-70">
-              Supported formats: PDF, TIFF, JPG, PNG (Max {MAX_FILE_SIZE_MB}MB)
+              {t('supportedFormats', lang)}
             </p>
           </div>
 
@@ -532,7 +541,7 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div>
               <label className="block font-label-sm text-label-sm text-on-surface mb-2">
-                Document Category
+                {t('docCategoryLabel', lang)}
               </label>
               <div className="relative">
                 <select
@@ -554,7 +563,7 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
 
             <div>
               <label className="block font-label-sm text-label-sm text-on-surface mb-2">
-                District Scope
+                {t('districtScopeLabel', lang)}
               </label>
               <div className="relative">
                 <select
@@ -577,7 +586,7 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
 
             <div>
               <label className="block font-label-sm text-label-sm text-on-surface mb-2">
-                Primary Language / OCR
+                {t('primaryLanguageLabel', lang)}
               </label>
               <div className="relative">
                 <select
@@ -609,12 +618,12 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
                 <span className="material-symbols-outlined animate-spin text-2xl">
                   autorenew
                 </span>
-                <span>Executing AI Pipeline...</span>
+                <span>{t('executingAiPipelineBtn', lang)}</span>
               </>
             ) : (
               <>
                 <span className="material-symbols-outlined text-2xl">memory</span>
-                <span>Start AI Digitization</span>
+                <span>{t('startAiPipelineBtn', lang)}</span>
               </>
             )}
           </button>
@@ -628,7 +637,7 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-headline-md text-headline-md text-[#0D2B40]">
-                Pipeline Live Status
+                {t('pipelineLiveStatusTitle', lang)}
               </h2>
               <div
                 className={`flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium ${
@@ -663,7 +672,7 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
             {/* Overall Progress Indicator */}
             <div className="mb-8 p-4 rounded-xl bg-[#F4F9FE] border border-[#D0E8F5]">
               <div className="flex justify-between font-label-sm text-xs mb-2 text-on-surface">
-                <span className="font-semibold">Overall Progress</span>
+                <span className="font-semibold">{t('overallProgressLabel', lang)}</span>
                 <span className="font-bold text-primary">
                   {isProcessing
                     ? `${uploadProgress}%`
@@ -702,7 +711,7 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
                 </div>
                 <div className="pt-1">
                   <p className="font-body-md text-body-md text-on-surface font-semibold">
-                    Storage Ingestion
+                    {t('stepStorage', lang)}
                   </p>
                   <p className="text-xs text-on-surface-variant mt-0.5">
                     File encrypted and stored securely.
@@ -726,7 +735,7 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
                 </div>
                 <div className="pt-1">
                   <p className="font-body-md text-body-md text-on-surface font-semibold">
-                    Multilingual OCR
+                    {t('stepOcr', lang)}
                   </p>
                   <p className="text-xs text-on-surface-variant mt-0.5">
                     Marathi text extracted with 98% confidence.
@@ -758,7 +767,7 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
                 </div>
                 <div className="pt-1">
                   <p className="font-body-md text-body-md text-on-surface font-semibold text-primary">
-                    LLM Structuring
+                    {t('stepStructuring', lang)}
                   </p>
                   <p className="text-xs text-on-surface-variant mt-0.5">
                     Mapping entities to schema...
@@ -781,7 +790,7 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
                 </div>
                 <div className={`pt-1 ${processingStep === 4 ? 'opacity-100' : 'opacity-50'}`}>
                   <p className="font-body-md text-body-md text-on-surface font-semibold">
-                    Validation
+                    {t('stepValidation', lang)}
                   </p>
                   <p className="text-xs text-on-surface-variant mt-0.5">
                     {processingStep === 4 ? 'Validation complete. Routing to queue.' : 'Awaiting structuring completion.'}

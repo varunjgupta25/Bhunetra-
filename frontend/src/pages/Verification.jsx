@@ -4,6 +4,7 @@ import { recordsApi } from '@/api/axiosClient'
 import { DigitizedPdfModal } from '@/components/DigitizedPdfModal'
 import { ConfidenceBadge } from '@/components/ConfidenceBadge'
 import { cn } from '@/lib/utils'
+import { t } from '@/utils/languages'
 
 // Demo document profiles with accurate Marathi land metadata and OCR bounding boxes
 const DEMO_DOCUMENTS = {
@@ -179,7 +180,8 @@ function normalizeExtractedFields(rawFields = {}, confidenceScores = {}) {
 }
 
 export default function VerificationPage() {
-  const { user, decrementPendingCount, lastExtractedResult } = useAppStore()
+  const { user, decrementPendingCount, lastExtractedResult, currentLanguage } = useAppStore()
+  const lang = currentLanguage || 'mr'
 
   const [selectedDocKey, setSelectedDocKey] = useState('paper1')
   const [viewerMode, setViewerMode] = useState('annotated') // 'annotated' | 'raw' | 'ocr-lines' | 'simulated'
@@ -271,17 +273,17 @@ export default function VerificationPage() {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="bg-amber-500/10 text-amber-700 dark:text-amber-400 px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 border border-amber-500/20">
               <span className="material-symbols-outlined text-sm">gavel</span>
-              Module 3 · Human-in-the-Loop OCR Verification
+              {t('module3Title', lang)}
             </span>
             <span className="text-xs text-on-surface-variant font-mono">
-              Assigned: {user?.displayName || 'A. R. Shinde (Verifier)'}
+              {t('assignedVerifier', lang)}: {user?.displayName || 'A. R. Shinde'}
             </span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-deep-navy dark:text-white">
-            Verification Workspace &amp; OCR Bounding Box Inspector
+            {t('verWorkspaceTitle', lang)}
           </h2>
           <p className="text-xs sm:text-sm text-on-surface-variant max-w-2xl">
-            Inspect EasyOCR extracted text against original scanned land records with real-time bounding box synchronization.
+            {t('verWorkspaceSubtitle', lang)}
           </p>
         </div>
 
@@ -289,7 +291,7 @@ export default function VerificationPage() {
         <div className="flex items-center gap-2 bg-surface-container-low p-2 rounded-2xl border border-[#D0E8F5] dark:border-slate-800">
           <label className="text-xs font-bold text-on-surface whitespace-nowrap pl-2 flex items-center gap-1">
             <span className="material-symbols-outlined text-sm text-primary">folder_open</span>
-            <span>Document:</span>
+            <span>{t('docSelectorLabel', lang)}</span>
           </label>
           <select
             value={selectedDocKey}
@@ -332,7 +334,7 @@ export default function VerificationPage() {
                   )}
                   title="Show interactive OCR overlays on document"
                 >
-                  OCR Overlays
+                  {t('ocrOverlaysBtn', lang)}
                 </button>
                 <button
                   onClick={() => setViewerMode('raw')}
@@ -343,7 +345,7 @@ export default function VerificationPage() {
                   )}
                   title="Show raw scanned image"
                 >
-                  Raw Scan
+                  {t('rawScanBtn', lang)}
                 </button>
                 <button
                   onClick={() => setViewerMode('ocr-lines')}
@@ -354,7 +356,7 @@ export default function VerificationPage() {
                   )}
                   title="View list of all OCR extracted text lines"
                 >
-                  Text Layer
+                  {t('textLayerBtn', lang)}
                 </button>
               </div>
 
@@ -528,12 +530,12 @@ export default function VerificationPage() {
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-primary text-2xl">edit_document</span>
               <h3 className="text-xl font-bold text-deep-navy dark:text-white">
-                Extracted Data Verification
+                {t('extractedDataVerificationTitle', lang)}
               </h3>
             </div>
             {isSaved && (
               <span className="bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-xs font-semibold px-3 py-1 rounded-full border border-emerald-300 dark:border-emerald-800 flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm">check_circle</span> Approved &amp; Logged to Audit Trail
+                <span className="material-symbols-outlined text-sm">check_circle</span> {t('approvedLoggedBtn', lang)}
               </span>
             )}
           </div>
@@ -551,7 +553,7 @@ export default function VerificationPage() {
                   <span className={cn("material-symbols-outlined text-base", currentDoc.forensic.isForged ? "text-red-600" : "text-primary")}>
                     {currentDoc.forensic.isForged ? "dangerous" : "shield_with_heart"}
                   </span>
-                  Forensic ELA &amp; Mutation Authenticity Analysis
+                  {t('forensicElaBadge', lang)}
                 </span>
                 <span className={cn(
                   "text-[10px] font-bold px-2.5 py-0.5 rounded-full border uppercase tracking-wider",
@@ -564,21 +566,21 @@ export default function VerificationPage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                 <div className="bg-white dark:bg-slate-800/80 p-2.5 rounded-lg border border-[#D0E8F5] dark:border-slate-700">
-                  <span className="text-gray-500 dark:text-gray-400 block text-[10px]">Image ELA Tamper Check</span>
+                  <span className="text-gray-500 dark:text-gray-400 block text-[10px]">{t('imageElaCheckLabel', lang)}</span>
                   <span className={cn("font-semibold flex items-center gap-1 mt-0.5", currentDoc.forensic.isForged ? "text-red-600" : "text-emerald-700 dark:text-emerald-400")}>
                     <span className="material-symbols-outlined text-xs">{currentDoc.forensic.isForged ? "error" : "check_circle"}</span>
                     {currentDoc.forensic.elaStatus}
                   </span>
                 </div>
                 <div className="bg-white dark:bg-slate-800/80 p-2.5 rounded-lg border border-[#D0E8F5] dark:border-slate-700">
-                  <span className="text-gray-500 dark:text-gray-400 block text-[10px]">Mutation Ledger Match</span>
+                  <span className="text-gray-500 dark:text-gray-400 block text-[10px]">{t('mutationLedgerLabel', lang)}</span>
                   <span className={cn("font-semibold flex items-center gap-1 mt-0.5", currentDoc.forensic.isForged ? "text-red-600" : "text-primary")}>
                     <span className="material-symbols-outlined text-xs">history_edu</span>
                     {currentDoc.forensic.mutationLedger}
                   </span>
                 </div>
                 <div className="bg-white dark:bg-slate-800/80 p-2.5 rounded-lg border border-[#D0E8F5] dark:border-slate-700">
-                  <span className="text-gray-500 dark:text-gray-400 block text-[10px]">Village Claim Collision</span>
+                  <span className="text-gray-500 dark:text-gray-400 block text-[10px]">{t('villageCollisionLabel', lang)}</span>
                   <span className={cn("font-semibold flex items-center gap-1 mt-0.5", currentDoc.forensic.isForged ? "text-red-600" : "text-emerald-700 dark:text-emerald-400")}>
                     <span className="material-symbols-outlined text-xs">{currentDoc.forensic.isForged ? "warning" : "verified"}</span>
                     {currentDoc.forensic.collisionCount}
@@ -596,7 +598,7 @@ export default function VerificationPage() {
               >
                 <div className="flex justify-between items-center mb-1.5">
                   <label className="block text-xs font-semibold text-on-surface-variant">
-                    Village (गाव) &amp; Code
+                    {t('villageAndCodeLabel', lang)}
                   </label>
                   <ConfidenceBadge confidence={fields.village?.confidence || fields.villageCode?.confidence} />
                 </div>
@@ -624,13 +626,13 @@ export default function VerificationPage() {
               >
                 <div className="flex justify-between items-center mb-1.5">
                   <label className="block text-xs font-bold text-on-surface">
-                    Khasra Number (गट / सर्व्हे क्रमांक)
+                    {t('khasraNumberLabel', lang)}
                   </label>
                   <div className="flex items-center gap-2">
                     {(fields.khasraNumber?.confidence ?? 1) < 0.7 && (
                       <span className="text-amber-600 dark:text-amber-400 text-xs font-bold flex items-center gap-1">
                         <span className="material-symbols-outlined text-sm">warning</span>
-                        Flagged For Review
+                        {t('flaggedForReviewLabel', lang)}
                       </span>
                     )}
                     <ConfidenceBadge confidence={fields.khasraNumber?.confidence} />
@@ -652,7 +654,7 @@ export default function VerificationPage() {
                   {(fields.khasraNumber?.confidence ?? 1) < 0.7 && (
                     <button
                       className="absolute right-2 top-2 p-1 text-gray-400 hover:text-primary transition-colors cursor-pointer"
-                      title="Reset to 248"
+                      title="Reset"
                       type="button"
                       onClick={() => handleFieldChange('khasraNumber', '248')}
                     >
@@ -661,7 +663,7 @@ export default function VerificationPage() {
                   )}
                 </div>
                 <p className="text-[11px] text-gray-500 mt-1">
-                  Clicking this field highlights the corresponding OCR bounding box on the original document.
+                  {t('ocrHighlightHint', lang)}
                 </p>
               </div>
 
@@ -673,7 +675,7 @@ export default function VerificationPage() {
               >
                 <div className="flex justify-between items-center mb-1.5">
                   <label className="block text-xs font-semibold text-on-surface-variant">
-                    Farmer / Land Owner Name (खातेदाराचे नाव)
+                    {t('ownerNameLabel', lang)}
                   </label>
                   <ConfidenceBadge confidence={fields.ownerName?.confidence} />
                 </div>
@@ -695,7 +697,7 @@ export default function VerificationPage() {
                 >
                   <div className="flex justify-between items-center mb-1.5">
                     <label className="block text-xs font-semibold text-on-surface-variant">
-                      Khata Number (खाते क्र.)
+                      {t('khataNoLabel', lang)}
                     </label>
                     <ConfidenceBadge confidence={fields.khataNumber?.confidence} />
                   </div>
@@ -715,7 +717,7 @@ export default function VerificationPage() {
                 >
                   <div className="flex justify-between items-center mb-1.5">
                     <label className="block text-xs font-semibold text-on-surface-variant">
-                      Area in Hectares (क्षेत्र हेक्टर)
+                      {t('landAreaLabel', lang)}
                     </label>
                     <ConfidenceBadge confidence={fields.area?.confidence} />
                   </div>
@@ -732,11 +734,11 @@ export default function VerificationPage() {
               {/* Reviewer Notes */}
               <div>
                 <label className="block text-xs font-semibold text-on-surface-variant mb-1.5">
-                  Verification Notes / Audit Remarks
+                  {t('verNotesLabel', lang)}
                 </label>
                 <textarea
                   className="w-full bg-white dark:bg-slate-900 border border-[#B8D8EE] dark:border-slate-700 rounded-lg px-4 py-2 text-on-surface text-xs focus:outline-none focus:ring-2 focus:ring-primary transition-all resize-none"
-                  placeholder="Record justification for field correction or verification audit..."
+                  placeholder={t('verNotesPlaceholder', lang)}
                   rows={2}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
@@ -753,7 +755,7 @@ export default function VerificationPage() {
                 className="px-3.5 py-2 rounded-xl text-xs font-bold text-secondary hover:bg-surface-container transition-colors border border-transparent hover:border-[#B8D8EE] cursor-pointer"
                 type="button"
               >
-                Reset Edits
+                {t('resetEditsBtn', lang)}
               </button>
               <button
                 onClick={() => setIsPdfModalOpen(true)}
@@ -761,7 +763,7 @@ export default function VerificationPage() {
                 type="button"
               >
                 <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
-                Export Digitized PDF Certificate
+                {t('downloadCertifiedPdfBtn', lang)}
               </button>
             </div>
 
@@ -779,7 +781,7 @@ export default function VerificationPage() {
               <span className="material-symbols-outlined text-base">
                 {isSaved ? "task_alt" : "verified"}
               </span>
-              {isSaved ? "Approved & Logged to Audit Trail" : "Approve & Save Record"}
+              {isSaved ? t('approvedLoggedBtn', lang) : t('approveSaveBtn', lang)}
             </button>
           </div>
         </div>
