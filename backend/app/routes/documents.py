@@ -48,12 +48,12 @@ async def upload_document(
         raise HTTPException(status_code=400, detail="Uploaded file must have a filename.")
 
     content_type = file.content_type or ""
-    allowed_types = ["image/jpeg", "image/png", "image/jpg", "application/pdf"]
+    allowed_types = ["image/jpeg", "image/png", "image/jpg", "application/pdf", "image/svg+xml"]
     
-    if not any(t in content_type.lower() for t in ["image", "pdf"]) and not any(file.filename.lower().endswith(ext) for ext in [".jpg", ".jpeg", ".png", ".pdf"]):
+    if not any(t in content_type.lower() for t in ["image", "pdf", "svg"]) and not any(file.filename.lower().endswith(ext) for ext in [".jpg", ".jpeg", ".png", ".pdf", ".svg"]):
         raise HTTPException(
             status_code=400,
-            detail="Unsupported file type. Only JPG, PNG, and PDF files are accepted."
+            detail="Unsupported file type. Only JPG, PNG, SVG, and PDF files are accepted."
         )
 
     file_bytes = await file.read()
@@ -266,11 +266,18 @@ async def execute_processing_pipeline(doc_id: str, file_bytes: bytes, user_uid: 
 
         # 5. Compute Confidence & Status Routing
         overall_conf, ver_status, flagged = calculate_overall_confidence(val_result.field_scores)
+        field_scores = dict(val_result.field_scores)
 
-        # If forensic engine flagged forgery or collision, override status to PENDING_REVIEW
+        # If forensic engine flagged forgery or collision, override status and lower field confidence
         if forensic_report.authenticity_rating != "AUTHENTIC":
             ver_status = VerificationStatus.PENDING_REVIEW
+            overall_conf = round(min(overall_conf, forensic_report.image_tamper_score), 3)
             flagged.append("forensic_tamper_flag")
+            for k in ["khasraNumber", "ownerName", "landArea", "village", "khataNumber", "ctsNumber", "mutationNumber"]:
+                if k in field_scores:
+                    field_scores[k] = min(field_scores[k], 0.25)
+                    if k not in flagged:
+                        flagged.append(k)
 
         # 6. Save Record to Firestore /records
         record_id = str(uuid.uuid4())
@@ -292,7 +299,7 @@ async def execute_processing_pipeline(doc_id: str, file_bytes: bytes, user_uid: 
             "ownershipType": extracted.ownershipType,
             "extraDetails": extracted.extraDetails or {},
             "extractedFields": extracted.model_dump(),
-            "confidenceScores": val_result.field_scores,
+            "confidenceScores": field_scores,
             "overallConfidence": overall_conf,
             "verificationStatus": ver_status.value,
             "documentUrl": f"/api/documents/{doc_id}/raw",
