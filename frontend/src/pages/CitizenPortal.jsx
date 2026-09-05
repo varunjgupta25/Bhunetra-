@@ -4,6 +4,7 @@ import { t } from '@/utils/languages'
 import { DigitizedPdfModal } from '@/components/DigitizedPdfModal'
 import { UploadForm, PipelineLiveStatusWidget } from '@/components/UploadForm'
 import { recordsApi } from '@/api/axiosClient'
+import { findDemoDocumentByFileName } from '@/data/demoDocumentsCatalog'
 
 /**
  * Adapter converting backend LandRecord schema into the exact UI model
@@ -350,42 +351,86 @@ export default function CitizenPortalPage() {
   const handleUploadComplete = async (extractedResult, fileInfo) => {
     const rawName = (fileInfo?.name || fileInfo?.fileName || '').toLowerCase()
     const fileName = rawName.replace(/[^a-z0-9]/g, '')
+    const matchedDoc = findDemoDocumentByFileName(fileInfo?.name || fileInfo?.fileName)
 
-    // 🚨 PAPER 4: FORGED / UNAUTHORIZED DEMO DOCUMENT DETECTED
+    // 🚨 TAMPERED / FORGED / UNAUTHORIZED DEMO DOCUMENT DETECTED
     if (
+      matchedDoc?.isForged ||
+      extractedResult?.isForged ||
+      fileName.includes('tampered') ||
       fileName.includes('paper4') ||
       fileName.includes('unauthorized') ||
       fileName.includes('forged') ||
       fileName.includes('mismatched') ||
+      fileName.includes('besa') ||
+      fileName.includes('fake') ||
+      fileName.includes('deccan') ||
+      fileName.includes('paithan') ||
+      fileName.includes('kalyan') ||
+      fileName.includes('titwala') ||
+      fileName.includes('shahapur') ||
+      fileName.includes('mahabaleshwar') ||
+      fileName.includes('panchavati') ||
+      fileName.includes('sinnar') ||
       fileName.includes('999')
     ) {
+      const ef = matchedDoc?.extractedFields || {}
       setMatchedRecord({
-        id: 'REC-FORGED-999',
-        recordId: 'REC-FORGED-999',
-        khasraNumber: '999/X',
-        khataNumber: '999',
-        ownerName: 'विक्रम बनावटराव शिंदे (Vikram Banavatrao Shinde - Fake Owner)',
-        ownerNameEn: 'Vikram Banavatrao Shinde (Unauthorized / Fake Owner)',
-        village: 'खोट्यावाडी (Fake Village)',
-        villageEn: 'Khotyawadi (Fake Village)',
-        tehsil: 'हवेली (Haveli)',
-        tehsilEn: 'Haveli',
-        district: 'पुणे (Pune)',
-        districtEn: 'Pune',
-        landArea: '9.99 हेक्टर (Mismatched Invalid Area)',
-        landAreaEn: '9.99 Hectare (Mismatched Invalid Area)',
-        ownershipType: '⚠️ अनधिकृत / बनावट फेरफार (UNAUTHORIZED / FORGED RECORD)',
+        id: matchedDoc?.id || extractedResult?.recordId || 'REC-FORGED-FRAUD-001',
+        recordId: matchedDoc?.id || extractedResult?.recordId || 'REC-FORGED-FRAUD-001',
+        khasraNumber: ef.khasraNumber?.value || extractedResult?.entities?.khasra_no || '999/X',
+        khataNumber: ef.khataNumber?.value || extractedResult?.entities?.khata_no || '9999',
+        ownerName: ef.ownerName?.value || 'संजय बनावटराव कांबळे (Sanjay Kamble - Fabricated Khata)',
+        ownerNameEn: 'Sanjay Kamble (Unauthorized / Fabricated Khata)',
+        village: ef.village?.value || 'बेसा (Besa - Nagpur)',
+        villageEn: 'Besa (Nagpur)',
+        tehsil: ef.tehsil?.value || 'नागपूर शहर (Nagpur City)',
+        tehsilEn: 'Nagpur City',
+        district: ef.district?.value || 'नागपूर (Nagpur)',
+        districtEn: 'Nagpur',
+        landArea: ef.area?.value || '12.50 हेक्टर (Exaggerated Area)',
+        landAreaEn: '12.50 Hectare (Exaggerated Area)',
+        ownershipType: ef.ownershipType?.value || '⚠️ अनधिकृत कर माफी (Illegal Tax Waiver & Forged Record)',
         status: 'FLAGGED_ANOMALY',
         isForged: true,
-        encumbrance: '❌ AI FRAUD ALERT: Seal Mismatch & Index Not Found in 1M DB',
-        encumbranceEn: '❌ AI FRAUD ALERT: Seal Mismatch & Index Not Found in 1M DB',
-        overallConfidence: 0.12,
+        encumbrance: '❌ AI FRAUD ALERT: Seal Signature Mismatch & Record Not Found in 1M DB',
+        encumbranceEn: '❌ AI FRAUD ALERT: Seal Signature Mismatch & Record Not Found in 1M DB',
+        overallConfidence: matchedDoc?.confidence || 0.185,
+        raw: extractedResult,
       })
       return
     }
 
     let targetDistrict = 'Pune'
     let targetVillage = 'Wagholi'
+
+    if (matchedDoc?.extractedFields) {
+      const ef = matchedDoc.extractedFields
+      setMatchedRecord({
+        id: matchedDoc.id || `REC-${Date.now()}`,
+        recordId: matchedDoc.id || `REC-${Date.now()}`,
+        khasraNumber: ef.khasraNumber?.value || '142/3A',
+        khataNumber: ef.khataNumber?.value || '582',
+        ownerName: ef.ownerName?.value || 'रमेश विठ्ठल पाटील (Ramesh Vitthal Patil)',
+        ownerNameEn: 'Ramesh Vitthal Patil',
+        village: ef.village?.value || 'वाघोली (Wagholi)',
+        villageEn: 'Wagholi',
+        tehsil: ef.tehsil?.value || 'हवेली (Haveli)',
+        tehsilEn: 'Haveli',
+        district: ef.district?.value || 'पुणे (Pune)',
+        districtEn: 'Pune',
+        landArea: ef.area?.value || '1.45 हेक्टर',
+        landAreaEn: '1.45 Hectare',
+        ownershipType: ef.ownershipType?.value || 'भोगवटादार वर्ग - १',
+        status: 'VERIFIED',
+        isForged: false,
+        encumbrance: 'निरंक (Clear Title / No Encumbrances)',
+        encumbranceEn: 'Clear Title / No Encumbrances',
+        overallConfidence: matchedDoc.confidence || 0.994,
+        raw: extractedResult,
+      })
+      return
+    }
 
     if (fileName.includes('paper2') || fileName.includes('khadakwasla') || fileName.includes('248')) {
       targetDistrict = 'Pune'

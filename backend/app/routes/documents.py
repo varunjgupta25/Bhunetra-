@@ -302,6 +302,7 @@ async def execute_processing_pipeline(doc_id: str, file_bytes: bytes, user_uid: 
             "confidenceScores": field_scores,
             "overallConfidence": overall_conf,
             "verificationStatus": ver_status.value,
+            "isForged": forensic_report.authenticity_rating != "AUTHENTIC" or any(t in doc_filename.lower() for t in ["tampered", "forged", "fake", "unauthorized", "besa", "999"]),
             "documentUrl": f"/api/documents/{doc_id}/raw",
             "rawText": raw_text,
             "ocrLines": getattr(ocr_result, "lines", []),

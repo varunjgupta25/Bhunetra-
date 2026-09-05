@@ -110,6 +110,20 @@ export default function VerificationPage() {
   // Pipeline upload result override
   useEffect(() => {
     if (lastExtractedResult) {
+      if (lastExtractedResult.categoryId) {
+        setSelectedCategoryId(lastExtractedResult.categoryId)
+      }
+      if (lastExtractedResult.docKey) {
+        setSelectedDocKey(lastExtractedResult.docKey)
+      } else if (lastExtractedResult.isForged) {
+        // If forged but no key specified, find the forged variant of the selected category
+        const cat = lastExtractedResult.categoryId || selectedCategoryId
+        const tamperedDoc = DEMO_DOCUMENTS_CATALOG.find((d) => d.categoryId === cat && d.isForged)
+        if (tamperedDoc) {
+          setSelectedDocKey(tamperedDoc.key)
+        }
+      }
+
       setRecordId(lastExtractedResult.recordId || `REC-${Date.now()}`)
       const raw = lastExtractedResult.extractedFields || {}
       const scores = lastExtractedResult.confidenceScores || {}

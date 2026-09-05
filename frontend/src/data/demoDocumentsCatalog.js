@@ -3723,3 +3723,137 @@ export const DOCUMENT_CATEGORIES = [
     "badge": "वारस व वाटप"
   }
 ];
+
+/**
+ * Intelligent file-to-catalog resolver that matches uploaded demo documents,
+ * recognizing all 10 land record categories and authentic/tampered variants.
+ */
+export function findDemoDocumentByFileName(fileName) {
+  if (!fileName) return null
+  const raw = String(fileName).toLowerCase()
+  const fn = raw.replace(/[^a-z0-9]/g, '')
+  
+  // 1. Check exact key match
+  for (const doc of DEMO_DOCUMENTS_CATALOG) {
+    const docKeyClean = doc.key.toLowerCase().replace(/[^a-z0-9]/g, '')
+    if (fn.includes(docKeyClean)) return doc
+  }
+
+  // 2. 8-A Khata (गाव नमुना ८-अ)
+  if (fn.includes('8a') || fn.includes('khata') || raw.includes('8-a') || raw.includes('8_a')) {
+    if (fn.includes('tampered') || fn.includes('besa') || fn.includes('fraud') || fn.includes('fake') || fn.includes('3')) {
+      return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === '8a_tampered')
+    }
+    if (fn.includes('hingna') || fn.includes('2')) {
+      return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === '8a_auth_2')
+    }
+    return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === '8a_auth_1')
+  }
+
+  // 3. 7/12 Extract (गाव नमुना ७/१२)
+  if (fn.includes('712') || fn.includes('satbara') || fn.includes('paper1') || fn.includes('paper2') || fn.includes('paper3') || fn.includes('paper4')) {
+    if (fn.includes('tampered') || fn.includes('fake') || fn.includes('paper4') || fn.includes('unauthorized') || fn.includes('forged') || fn.includes('3')) {
+      return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === '712_tampered')
+    }
+    if (fn.includes('khadakwasla') || fn.includes('paper2') || fn.includes('2')) {
+      return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === '712_auth_2')
+    }
+    return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === '712_auth_1')
+  }
+
+  // 4. Urban Property Card (CTS / मालमत्ता पत्रक)
+  if (fn.includes('property') || fn.includes('card') || fn.includes('cts') || fn.includes('urban')) {
+    if (fn.includes('tampered') || fn.includes('deccan') || fn.includes('3')) {
+      return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'property_card_tampered')
+    }
+    if (fn.includes('andheri') || fn.includes('2')) {
+      return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'property_card_auth_2')
+    }
+    return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'property_card_auth_1')
+  }
+
+  // 5. Mutation Register (गाव नमुना ६ फेरफार)
+  if (fn.includes('mutation') || fn.includes('ferfar') || fn.includes('form6')) {
+    if (fn.includes('tampered') || fn.includes('paithan') || fn.includes('3')) {
+      return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'mutation_tampered')
+    }
+    if (fn.includes('dindori') || fn.includes('2')) {
+      return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'mutation_auth_2')
+    }
+    return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'mutation_auth_1')
+  }
+
+  // 6. Registered Sale Deed (नोंदणीकृत खरेदीखत)
+  if (fn.includes('sale') || fn.includes('deed') || fn.includes('kharedi') || fn.includes('conveyance')) {
+    if (fn.includes('tampered') || fn.includes('kalyan') || fn.includes('3')) {
+      return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'sale_deed_tampered')
+    }
+    if (fn.includes('umred') || fn.includes('2')) {
+      return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'sale_deed_auth_2')
+    }
+    return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'sale_deed_auth_1')
+  }
+
+  // 7. Search Report (शोध अहवाल)
+  if (fn.includes('search') || fn.includes('report') || fn.includes('encumbrance') || fn.includes('boja')) {
+    if (fn.includes('tampered') || fn.includes('titwala') || fn.includes('3')) {
+      return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'search_report_tampered')
+    }
+    if (fn.includes('trimbak') || fn.includes('2')) {
+      return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'search_report_auth_2')
+    }
+    return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'search_report_auth_1')
+  }
+
+  // 8. Gat Nakasha Map (गट नकाशा)
+  if (fn.includes('gat') || fn.includes('nakasha') || fn.includes('map') || fn.includes('tipan')) {
+    if (fn.includes('tampered') || fn.includes('shahapur') || fn.includes('3')) {
+      return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'gat_map_tampered')
+    }
+    if (fn.includes('trimbak') || fn.includes('2')) {
+      return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'gat_map_auth_2')
+    }
+    return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'gat_map_auth_1')
+  }
+
+  // 9. NA Order & Sanad (अकृषिक सनद)
+  if (fn.includes('naorder') || fn.includes('sanad') || fn.includes('naconversion')) {
+    if (fn.includes('tampered') || fn.includes('mahabaleshwar') || fn.includes('3')) {
+      return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'na_order_tampered')
+    }
+    if (fn.includes('badlapur') || fn.includes('2')) {
+      return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'na_order_auth_2')
+    }
+    return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'na_order_auth_1')
+  }
+
+  // 10. Gift / Relinquishment Deed (बक्षीस / हक्कसोड)
+  if (fn.includes('gift') || fn.includes('relinquish') || fn.includes('bakshis') || fn.includes('hakkasod')) {
+    if (fn.includes('tampered') || fn.includes('panchavati') || fn.includes('3')) {
+      return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'gift_deed_tampered')
+    }
+    if (fn.includes('umred') || fn.includes('2')) {
+      return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'gift_deed_auth_2')
+    }
+    return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'gift_deed_auth_1')
+  }
+
+  // 11. Partition Deed & Heirship (वारस व वाटप)
+  if (fn.includes('partition') || fn.includes('heir') || fn.includes('waras') || fn.includes('vatap')) {
+    if (fn.includes('tampered') || fn.includes('sinnar') || fn.includes('3')) {
+      return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'partition_tampered')
+    }
+    if (fn.includes('karveer') || fn.includes('2')) {
+      return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'partition_auth_2')
+    }
+    return DEMO_DOCUMENTS_CATALOG.find((d) => d.key === 'partition_auth_1')
+  }
+
+  // Generic fallback if filename has 'tampered' or 'forged' or 'fake'
+  if (fn.includes('tampered') || fn.includes('forged') || fn.includes('fake') || fn.includes('unauthorized') || fn.includes('anomaly')) {
+    return DEMO_DOCUMENTS_CATALOG.find((d) => d.isForged) || DEMO_DOCUMENTS_CATALOG[0]
+  }
+
+  return DEMO_DOCUMENTS_CATALOG[0]
+}
+

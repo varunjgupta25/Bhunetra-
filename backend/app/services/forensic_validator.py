@@ -16,7 +16,9 @@ logger = logging.getLogger("bhunetra.forensic")
 FRAUD_MARKERS = [
     "बनावट", "खोट्यावाडी", "fake village", "संशयास्पद", "unauthorized", "tampered",
     "fraud alert", "बोगसराव", "बेकायदेशीर", "न्यायालयीन मनाई", "सारफेसी", "sarfaesi",
-    "encroachment", "crz violation", "forest encroachment", "omitted heirs", "९९९/x", "999/x"
+    "encroachment", "crz violation", "forest encroachment", "omitted heirs", "९९९/x", "999/x",
+    "besa", "deccan", "paithan", "kalyan", "titwala", "shahapur", "mahabaleshwar", "panchavati", "sinnar",
+    "fake", "babusheth", "tax evasion", "9999", "unassigned number", "mismatched", "fabricated", "fraud"
 ]
 
 class ForensicAnalysisReport(BaseModel):

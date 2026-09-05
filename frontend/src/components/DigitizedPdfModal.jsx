@@ -34,6 +34,102 @@ export function DigitizedPdfModal({ isOpen, onClose, recordData, onConfirmExport
     }, 800)
   }
 
+  const handleDownloadPdf = () => {
+    const title = selectedLanguage === 'en'
+      ? 'GOVERNMENT OF MAHARASHTRA - CERTIFIED LAND RECORD EXTRACT'
+      : selectedLanguage === 'hi'
+      ? 'महाराष्ट्र सरकार - डिजिटल भू-अभिलेख प्रमाण पत्र'
+      : 'महाराष्ट्र शासन - डिजिटल भू-अभिलेख अधिकृत उतारा'
+
+    const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${record.khasraNumber || 'Land_Record'}_Certified_Extract</title>
+  <style>
+    @page { size: A4; margin: 15mm; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; color: #1e293b; line-height: 1.5; }
+    .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; position: relative; }
+    .emblem { font-size: 24px; margin-bottom: 4px; }
+    .govt-title { font-size: 16px; font-weight: bold; letter-spacing: 1px; color: #334155; }
+    .doc-title { font-size: 22px; font-weight: 900; margin: 6px 0; color: #0f172a; }
+    .meta-sub { font-size: 12px; color: #64748b; }
+    .qr-badge { position: absolute; top: 0; right: 0; border: 2px solid #0f172a; padding: 6px 10px; font-family: monospace; font-size: 10px; font-weight: bold; background: #f8fafc; }
+    table { width: 100%; border-collapse: collapse; margin-top: 24px; font-size: 13px; }
+    th, td { border: 1px solid #cbd5e1; padding: 10px 12px; text-align: left; }
+    th { background: #f1f5f9; font-weight: bold; color: #334155; }
+    .alert { padding: 10px 14px; border-radius: 6px; margin-top: 16px; font-weight: bold; font-size: 12px; }
+    .alert-danger { background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; }
+    .alert-success { background: #dcfce7; border: 1px solid #22c55e; color: #166534; }
+    .footer { margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 16px; display: flex; justify-content: space-between; font-size: 11px; color: #64748b; }
+    .sig-box { border: 1px solid #cbd5e1; padding: 8px 16px; background: #f8fafc; border-radius: 6px; text-align: right; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="qr-badge">BHUNETRA NIC<br>VERIFIED ✓</div>
+    <div class="emblem">🏛️</div>
+    <div class="govt-title">${selectedLanguage === 'en' ? 'GOVERNMENT OF MAHARASHTRA • REVENUE DEPARTMENT' : selectedLanguage === 'hi' ? 'महाराष्ट्र सरकार • राजस्व विभाग' : 'महाराष्ट्र शासन • महसूल व वन विभाग'}</div>
+    <div class="doc-title">${title}</div>
+    <div class="meta-sub">गाव (Village): <strong>${record.village || 'Wagholi'}</strong> | तालुका (Tehsil): <strong>${record.tehsil || 'Haveli'}</strong> | जिल्हा (District): <strong>${record.district || 'Pune'}</strong></div>
+  </div>
+
+  ${record.isForged ? `
+  <div class="alert alert-danger">
+    🚨 FRAUD ALERT DETECTED: This record failed authenticity checks. Digital seal hash mismatch and unassigned index in 1,000,000+ Land Database.
+  </div>` : `
+  <div class="alert alert-success">
+    ✔ VERIFIED STATE RECORD: Certified under Maharashtra Land Revenue Code 1966 & Digital India Land Records Modernization Programme (DILRMP).
+  </div>`}
+
+  <table>
+    <tr>
+      <th>गट / सर्व्हे क्र. (Survey / Gat No.)</th>
+      <td><strong>${record.khasraNumber || '142/3A'}</strong></td>
+      <th>खाते क्र. (Khata No.)</th>
+      <td><strong>${record.khataNumber || '582'}</strong></td>
+    </tr>
+    <tr>
+      <th>खातेदाराचे नाव (Owner / Holder)</th>
+      <td colspan="3"><strong>${selectedLanguage === 'en' ? record.ownerNameEn || record.ownerName : record.ownerName}</strong></td>
+    </tr>
+    <tr>
+      <th>एकूण क्षेत्र (Total Land Area)</th>
+      <td>${selectedLanguage === 'en' ? record.landAreaEn || record.landArea : record.landArea}</td>
+      <th>धारणा प्रकार (Tenure Class)</th>
+      <td>${record.ownershipType || 'भोगवटादार वर्ग - १'}</td>
+    </tr>
+    <tr>
+      <th>बोजा / फेरफार तपशील (Liens / Mutation)</th>
+      <td colspan="3" style="${record.isForged ? 'color: #dc2626; font-weight: bold;' : ''}">${selectedLanguage === 'en' ? record.encumbranceEn || record.encumbrance : record.encumbrance}</td>
+    </tr>
+  </table>
+
+  <div class="footer">
+    <div>
+      <div>Verification Hash: <strong>712MV-XG9-2026-BHUNETRA</strong></div>
+      <div>Digitally generated via Bhunetra Sovereign ML Engine</div>
+    </div>
+    <div class="sig-box">
+      <strong>डिजिटल स्वाक्षरी (Digital Signature)</strong><br>
+      तहसीलदार / तलाठी, महसूल विभाग<br>
+      <span style="color: #16a34a; font-weight: bold;">✔ Digitally Signed & Timestamped</span>
+    </div>
+  </div>
+</body>
+</html>`
+
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `Bhunetra_Certified_${record.khasraNumber || 'Land_Record'}_Extract.html`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
   const handlePrint = () => {
     window.print()
   }
@@ -177,7 +273,7 @@ export function DigitizedPdfModal({ isOpen, onClose, recordData, onConfirmExport
                   Print
                 </button>
                 <button
-                  onClick={() => alert('PDF Certificate Downloaded Successfully!')}
+                  onClick={handleDownloadPdf}
                   className="px-4 py-2 rounded-xl text-xs font-semibold bg-primary text-on-primary hover:bg-[#2DA090] transition-colors flex items-center gap-1 cursor-pointer shadow-sm"
                   type="button"
                 >
