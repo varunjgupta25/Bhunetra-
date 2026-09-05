@@ -7,13 +7,14 @@ import { t } from '@/utils/languages'
 import { NonLandRecordModal } from '@/components/NonLandRecordModal'
 
 const MAX_FILE_SIZE_MB = 50
-const ALLOWED_EXTENSIONS = ['.pdf', '.tiff', '.tif', '.jpg', '.jpeg', '.png']
+const ALLOWED_EXTENSIONS = ['.pdf', '.tiff', '.tif', '.jpg', '.jpeg', '.png', '.svg']
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
   'image/tiff',
   'image/png',
   'image/jpeg',
   'image/jpg',
+  'image/svg+xml',
 ]
 
 // Strict Land Record Verification Utility
@@ -507,7 +508,7 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
               ref={fileInputRef}
               type="file"
               className="hidden"
-              accept=".pdf,.tiff,.tif,.jpg,.jpeg,.png"
+              accept=".pdf,.tiff,.tif,.jpg,.jpeg,.png,.svg,image/*,application/pdf"
               onChange={handleFileSelect}
               disabled={isProcessing}
             />
