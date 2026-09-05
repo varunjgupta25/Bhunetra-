@@ -1,0 +1,14 @@
+# Bhunetra Team Code Owners & Review Policy (SIH 2026 - Team Code.IT)
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global Default Owner
+* @varunjgupta25
+
+# Frontend Architecture (React + Vite + TailwindCSS)
+/frontend/ @varunjgupta25
+
+# Backend Architecture (FastAPI + ML + EasyOCR + Synthetic DB)
+/backend/ @varunjgupta25
+
+# CI/CD Workflows & Repository Governance
+/.github/ @varunjgupta25
