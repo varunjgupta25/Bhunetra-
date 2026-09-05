@@ -79,32 +79,34 @@ def generate_million_database(num_records: int = 1000000, target_csv: bool = Tru
     # Fast bulk insertion
     cursor.execute("DELETE FROM records")
     
-    # 3 Anchored Judge Demo Records (Matching printable paper demo documents)
+    # 20 Anchored Demo Records (Matching all 10 Land Document Categories x 2 Authorized Papers)
     ANCHORED_DEMO_RECORDS = [
-        (
-            "142/3A", "582", "रमेश विठ्ठल पाटील", "Ramesh Vitthal Patil", "विठ्ठल बाबुरावा पाटील",
-            "वाघोली", "Wagholi", "हवेली", "Haveli", "पुणे", "Pune",
-            1.45, 1.35, 0.10, "भोगवटादार वर्ग - १", "निरंक (Clear Title)",
-            "1842", "MH-27-PN-HV-WAG-1423A", "712MV-XG9-2026-PUNE-0941"
-        ),
-        (
-            "248", "104", "रमेश बाबुरावा पाटील", "Ramesh Baburao Patil", "बाबुराव विठ्ठल पाटील",
-            "खडकवासला", "Khadakwasla", "हवेली", "Haveli", "पुणे", "Pune",
-            1.25, 1.20, 0.05, "भोगवटादार वर्ग - १", "निरंक (Clear Title)",
-            "2041", "MH-27-PN-HV-KHD-0248", "712MV-XG9-2026-PUNE-0248"
-        ),
-        (
-            "105/B", "412", "गणेश पांडुरंग पवार", "Ganesh Pandurang Pawar", "पांडुरंग बापू पवार",
-            "त्र्यंबकेश्वर", "Trimbakeshwar", "नाशिक", "Nashik", "नाशिक", "Nashik",
-            3.10, 2.90, 0.20, "भोगवटादार वर्ग - १", "निरंक (Clear Title)",
-            "3045", "MH-27-NS-NS-TRM-0105", "712MV-XG9-2026-NASH-0105"
-        ),
+        ("142/3A", "582", "रमेश विठ्ठल पाटील", "Ramesh Vitthal Patil", "विठ्ठल बाबुरावा पाटील", "वाघोली", "Wagholi", "हवेली", "Haveli", "पुणे", "Pune", 1.45, 1.35, 0.10, "भोगवटादार वर्ग - १", "निरंक (Clear Title)", "1842", "MH-27-PN-HV-WAG-1423A", "712MV-XG9-2026-PUNE-0001"),
+        ("89/2B", "314", "सुरेश गणपत देशमुख", "Suresh Ganpat Deshmukh", "गणपत आनंदराव देशमुख", "माळेगाव बु.", "Malegaon BK", "बारामती", "Baramati", "पुणे", "Pune", 2.80, 2.65, 0.15, "भोगवटादार वर्ग - १", "निरंक (Clear Title)", "2190", "MH-27-PN-BM-MAL-0892B", "712MV-XG9-2026-PUNE-0002"),
+        ("105/B", "341", "गणेश पांडुरंग पवार", "Ganesh Pandurang Pawar", "पांडुरंग बापू पवार", "त्र्यंबकेश्वर", "Trimbakeshwar", "त्र्यंबकेश्वर", "Trimbakeshwar", "नाशिक", "Nashik", 0.85, 0.80, 0.05, "भोगवटादार वर्ग - १", "निरंक (Clear Title)", "902", "MH-27-NS-TR-TRM-0105B", "8AMV-XG9-2026-NASH-0001"),
+        ("74/1", "198", "सुनिता अशोक गायकवाड", "Sunita Ashok Gaikwad", "अशोक यशवंत गायकवाड", "जानोरी", "Janori", "दिंडोरी", "Dindori", "नाशिक", "Nashik", 1.60, 1.50, 0.10, "भोगवटादार वर्ग - १", "निरंक (Clear Title)", "1145", "MH-27-NS-DD-JAN-00741", "8AMV-XG9-2026-NASH-0002"),
+        ("1204/5", "120", "प्रकाश नारायण कुलकर्णी", "Prakash Narayan Kulkarni", "नारायण श्रीपाद कुलकर्णी", "शिवाजी नगर", "Shivaji Nagar", "हवेली", "Haveli", "पुणे", "Pune", 0.04, 0.04, 0.00, "भोगवटादार वर्ग - १", "निरंक (Clear Title)", "4521", "MH-27-PN-HV-SHN-12045", "CTSMV-XG9-2026-PUNE-0001"),
+        ("882/A", "88", "अंजली रवींद्र जोशी", "Anjali Ravindra Joshi", "रवींद्र भालचंद्र जोशी", "कोथरूड", "Kothrud", "हवेली", "Haveli", "पुणे", "Pune", 0.02, 0.02, 0.00, "भोगवटादार वर्ग - १", "निरंक (Clear Title)", "3812", "MH-27-PN-HV-KTH-0882A", "CTSMV-XG9-2026-PUNE-0002"),
+        ("215", "410", "दिलीप शंकर शिंदे", "Dilip Shankar Shinde", "शंकर तुकाराम शिंदे", "ओगलेवाडी", "Ogalewadi", "कराड", "Karad", "सातारा", "Satara", 1.20, 1.15, 0.05, "भोगवटादार वर्ग - १", "निरंक (Clear Title)", "2841", "MH-27-ST-KR-OGL-02150", "FERMV-XG9-2026-SATA-0001"),
+        ("142/1", "295", "मोहन यशवंत जाधव", "Mohan Yashwant Jadhav", "यशवंत मारुती जाधव", "भुईंज", "Bhuinj", "वाई", "Wai", "सातारा", "Satara", 0.95, 0.90, 0.05, "भोगवटादार वर्ग - १", "निरंक (Clear Title)", "1932", "MH-27-ST-WI-BHU-01421", "FERMV-XG9-2026-SATA-0002"),
+        ("310/2", "640", "विक्रम बाळासाहेब भोसले", "Vikram Balasaheb Bhosale", "बाळासाहेब सर्जेराव भोसले", "उरुळी कांचन", "Uruli Kanchan", "हवेली", "Haveli", "पुणे", "Pune", 1.10, 1.05, 0.05, "भोगवटादार वर्ग - १", "निरंक (Clear Title)", "5021", "MH-27-PN-HV-URL-03102", "DEEDMV-XG9-2026-PUNE-0001"),
+        ("165/4", "380", "संदीप एकनाथ थोरात", "Sandeep Eknath Thorat", "एकनाथ गणपत थोरात", "पौड", "Paud", "मुळशी", "Mulshi", "पुणे", "Pune", 0.75, 0.70, 0.05, "भोगवटादार वर्ग - १", "निरंक (Clear Title)", "3310", "MH-27-PN-ML-PAU-01654", "DEEDMV-XG9-2026-PUNE-0002"),
+        ("94/1A", "512", "मनोज रामचंद्र म्हात्रे", "Manoj Ramchandra Mhatre", "रामचंद्र धाकू म्हात्रे", "कामोठे", "Kamothe", "पनवेल", "Panvel", "रायगड", "Raigad", 0.50, 0.48, 0.02, "भोगवटादार वर्ग - १", "निरंक (Clear Title)", "1420", "MH-27-RG-PN-KAM-00941", "SRCHMV-XG9-2026-RAIG-0001"),
+        ("52/3", "275", "प्रदीप वसंत पाटील", "Pradeep Vasant Patil", "वसंत बाबुराव पाटील", "वरसोली", "Varsoli", "अलिबाग", "Alibaug", "रायगड", "Raigad", 0.65, 0.60, 0.05, "भोगवटादार वर्ग - १", "निरंक (Clear Title)", "890", "MH-27-RG-AB-VAR-00523", "SRCHMV-XG9-2026-RAIG-0002"),
+        ("182", "390", "नितीन रामदास मोरे", "Nitin Ramdas More", "रामदास विठ्ठल मोरे", "तळेगाव दाभाडे", "Talegaon Dabhade", "मावळ", "Maval", "पुणे", "Pune", 1.85, 1.75, 0.10, "भोगवटादार वर्ग - १", "निरंक (Clear Title)", "2614", "MH-27-PN-MV-TLG-01820", "MAPMV-XG9-2026-PUNE-0001"),
+        ("95/2", "420", "संजय तुकाराम साळुंखे", "Sanjay Tukaram Salunke", "तुकाराम बाबुराव साळुंखे", "नसरापूर", "Nasrapur", "भोर", "Bhor", "पुणे", "Pune", 2.10, 2.00, 0.10, "भोगवटादार वर्ग - १", "निरंक (Clear Title)", "1780", "MH-27-PN-BH-NAS-00952", "MAPMV-XG9-2026-PUNE-0002"),
+        ("112/1", "680", "राजेश माधवराव सावंत", "Rajesh Madhavrao Sawant", "माधवराव सखाराम सावंत", "माजीवडा", "Majiwada", "ठाणे", "Thane", "ठाणे", "Thane", 0.40, 0.40, 0.00, "भोगवटादार वर्ग - १", "निरंक (Clear Title)", "6210", "MH-27-TH-TH-MAJ-01121", "NAMV-XG9-2026-THAN-0001"),
+        ("204/3", "450", "दीपक हरिश्चंद्र चौगुले", "Deepak Harishchandra Chougule", "हरिश्चंद्र विष्णू चौगुले", "डोंबिवली पूर्व", "Dombivli East", "कल्याण", "Kalyan", "ठाणे", "Thane", 0.30, 0.30, 0.00, "भोगवटादार वर्ग - १", "निरंक (Clear Title)", "4905", "MH-27-TH-KL-DMB-02043", "NAMV-XG9-2026-THAN-0002"),
+        ("145/2", "530", "विजय महादेव कदम", "Vijay Mahadev Kadam", "महादेव आनंदराव कदम", "शिरोली", "Shiroli", "हातकणंगले", "Hatkanangale", "कोल्हापूर", "Kolhapur", 0.90, 0.85, 0.05, "भोगवटादार वर्ग - १", "निरंक (Clear Title)", "3102", "MH-27-KL-HT-SHR-01452", "GIFT-XG9-2026-KOLH-0001"),
+        ("88/1B", "310", "सचिन बाबुराव माने", "Sachin Baburao Mane", "बाबुराव गणपत माने", "उजळाईवाडी", "Ujalaiwadi", "करवीर", "Karveer", "कोल्हापूर", "Kolhapur", 0.60, 0.58, 0.02, "भोगवटादार वर्ग - १", "निरंक (Clear Title)", "2450", "MH-27-KL-KV-UJL-00881", "GIFT-XG9-2026-KOLH-0002"),
+        ("320", "820", "सुनील व अनिल वसंतराव कुलकर्णी", "Sunil & Anil Vasantrao Kulkarni", "वसंतराव नारायण कुलकर्णी", "कुपवाड", "Kupwad", "मिरज", "Miraj", "सांगली", "Sangli", 2.40, 2.30, 0.10, "भोगवटादार वर्ग - १", "निरंक (Clear Title)", "4120", "MH-27-SG-MR-KUP-03200", "PART-XG9-2026-SANG-0001"),
+        ("110/3", "590", "भारत व संतोष जगन्नाथ पाटील", "Bharat & Santosh Jagannath Patil", "जगन्नाथ विठ्ठल पाटील", "आष्टा", "Ashta", "वाळवा", "Walwa", "सांगली", "Sangli", 1.80, 1.70, 0.10, "भोगवटादार वर्ग - १", "निरंक (Clear Title)", "2890", "MH-27-SG-WL-ASH-01103", "PART-XG9-2026-SANG-0002"),
     ]
 
     batch = list(ANCHORED_DEMO_RECORDS)
     batch_size = 50000
     
-    for i in range(4, num_records + 1):
+    for i in range(21, num_records + 1):
         fn_idx = random.randint(0, len(FIRST_NAMES_MR) - 1)
         mn_idx = random.randint(0, len(MIDDLE_NAMES_MR) - 1)
         sn_idx = random.randint(0, len(SURNAMES_MR) - 1)
