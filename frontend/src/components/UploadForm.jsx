@@ -592,10 +592,16 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
                   disabled={isProcessing}
                   className="w-full appearance-none bg-surface-container-lowest border border-[#B8D8EE] rounded-lg px-4 py-3 pr-10 font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer disabled:opacity-60"
                 >
-                  <option value="7/12 Extract">7/12 Extract (७/१२ उतारा)</option>
-                  <option value="Property Card">Property Card (मालमत्ता पत्रक)</option>
-                  <option value="Sale Deed">Sale Deed (खरेदीखत)</option>
-                  <option value="Mutation Register">Mutation Register (फेरीपत्रक)</option>
+                  <option value="7/12 Extract">Village Form 7/12 (गाव नमुना ७/१२ उतारा)</option>
+                  <option value="8-A Extract">Village Form 8-A (गाव नमुना ८-अ खाते नोंद)</option>
+                  <option value="Property Card">Urban Property Card (मालमत्ता पत्रक / CTS)</option>
+                  <option value="Mutation Register">Mutation Register (गाव नमुना ६ फेरफार)</option>
+                  <option value="Sale Deed">Registered Sale Deed (नोंदणीकृत खरेदीखत)</option>
+                  <option value="Search Report">Encumbrance &amp; Search Report (बोजा व शोध अहवाल)</option>
+                  <option value="Gat Map">Cadastral Survey Map / Tipan (गट नकाशा)</option>
+                  <option value="NA Order">NA Conversion Order &amp; Sanad (अकृषिक सनद)</option>
+                  <option value="Gift Deed">Gift &amp; Relinquishment Deed (बक्षीस / हक्कसोड)</option>
+                  <option value="Partition Deed">Partition Deed &amp; Heirship (वारस व वाटप)</option>
                 </select>
                 <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">
                   arrow_drop_down

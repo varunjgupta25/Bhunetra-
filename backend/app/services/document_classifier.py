@@ -25,6 +25,10 @@ class DocumentCategory(str, Enum):
     URBAN_PROPERTY_CARD = "URBAN_PROPERTY_CARD"
     REGISTERED_SALE_DEED = "REGISTERED_SALE_DEED"
     SEARCH_REPORT = "SEARCH_REPORT"
+    GAT_NAKASHA_MAP = "GAT_NAKASHA_MAP"
+    NA_ORDER_SANAD = "NA_ORDER_SANAD"
+    GIFT_RELINQUISHMENT_DEED = "GIFT_RELINQUISHMENT_DEED"
+    PARTITION_HEIRSHIP_DEED = "PARTITION_HEIRSHIP_DEED"
     NON_LAND_DOCUMENT = "NON_LAND_DOCUMENT"
     UNKNOWN_LAND_DOCUMENT = "UNKNOWN_LAND_DOCUMENT"
 
@@ -32,6 +36,8 @@ class DocumentCategory(str, Enum):
     FORM_8A = "VILLAGE_FORM_8_A"
     FORM_6_MUTATION = "VILLAGE_FORM_6_FERFAR"
     SALE_DEED = "REGISTERED_SALE_DEED"
+    GAT_MAP = "GAT_NAKASHA_MAP"
+    NA_ORDER = "NA_ORDER_SANAD"
 
 
 class DocumentClassificationResult(BaseModel):
@@ -54,6 +60,10 @@ CATEGORY_LABELS = {
     DocumentCategory.URBAN_PROPERTY_CARD: "नगर भूमापन मिळकत पत्रिका (Urban Property Card / CTS)",
     DocumentCategory.REGISTERED_SALE_DEED: "नोंदणीकृत खरेदीखत (Registered Sale Deed)",
     DocumentCategory.SEARCH_REPORT: "शोध अहवाल (Title & Encumbrance Search Report)",
+    DocumentCategory.GAT_NAKASHA_MAP: "गट नकाशा व मोजणी प्रत (Cadastral Survey Map & Tipan)",
+    DocumentCategory.NA_ORDER_SANAD: "अकृषिक आदेश व सनद (NA Conversion Order & Sanad)",
+    DocumentCategory.GIFT_RELINQUISHMENT_DEED: "बक्षीसपत्र व हक्कसोडपत्र (Gift & Relinquishment Deed)",
+    DocumentCategory.PARTITION_HEIRSHIP_DEED: "वारस नोंद व वाटपपत्र (Partition Deed & Heirship Register)",
     DocumentCategory.NON_LAND_DOCUMENT: "अमान्य दस्तऐवज (Non-Land Document / Invalid)",
     DocumentCategory.UNKNOWN_LAND_DOCUMENT: "अज्ञात जमीन अभिलेख (Unrecognized Land Document)",
 }
@@ -131,6 +141,34 @@ class DocumentClassifier:
                 (r"(?:१३|३०|13|30)\s*वर्षांचा\s*शोध|30\s*years?\s*search", 3.5),
                 (r"शीर्षक\s*प्रमाणपत्र|title\s*certificate|title\s*clear", 3.0),
                 (r"कायदेशीर\s*सल्लागार|advocate|निर्दोष\s*व\s*मार्केटेबल", 2.5),
+            ],
+            DocumentCategory.GAT_NAKASHA_MAP: [
+                (r"गट\s*नकाशा|जमीन\s*नकाशा|village\s*map|cadastral\s*map", 4.5),
+                (r"मोजणी\s*प्रत|भूमापन\s*नकाशा|टिपण|tipan", 4.0),
+                (r"भूमी\s*अभिलेख\s*उपअधीक्षक|भूमि\s*अभिलेख|cadastral\s*survey", 3.5),
+                (r"सीमांकन|हद्द\s*कायम|boundary\s*demarcation", 3.0),
+                (r"scale\s*1\s*:\s*\d+|प्रमाण\s*१\s*:\s*\d+", 2.5),
+            ],
+            DocumentCategory.NA_ORDER_SANAD: [
+                (r"अकृषिक\s*आदेश|अकृषक\s*आदेश|non[\s\-]*agricultural\s*order", 4.5),
+                (r"कलम\s*(?:४४|44)|section\s*44\s*mlrc", 4.0),
+                (r"अकृषिक\s*सनद|na\s*sanad|सनद\s*पत्र", 4.0),
+                (r"जिल्हाधिकारी\s*कार्यालय|उपविभागीय\s*अधिकारी|sdo\s*office", 3.0),
+                (r"निवासी\s*वापर|व्यावसायिक\s*वापर|औद्योगिक\s*वापर", 2.5),
+            ],
+            DocumentCategory.GIFT_RELINQUISHMENT_DEED: [
+                (r"बक्षीस\s*पत्र|बक्षीसपत्र|gift\s*deed", 4.5),
+                (r"हक्क\s*सोड\s*पत्र|हक्कसोडपत्र|relinquishment\s*deed|release\s*deed", 4.5),
+                (r"विनामोबदला|प्रेमापोटी|रक्ताचे\s*नाते|without\s*monetary\s*consideration", 3.5),
+                (r"हक्क\s*सोडून\s*दिला|relinquish\s*all\s*rights", 3.0),
+                (r"दान\s*घेणारा|दान\s*देणारा", 3.0),
+            ],
+            DocumentCategory.PARTITION_HEIRSHIP_DEED: [
+                (r"वारस\s*नोंद|वारस\s*तपासणी|वारसदार|heirship\s*certificate", 4.5),
+                (r"वाटप\s*पत्र|वाटपपत्र|आपसात\s*वाटप|family\s*partition\s*deed", 4.5),
+                (r"तहसीलदार\s*वारस\s*नोंद|हिंदू\s*वारसा\s*कायदा|hindu\s*succession", 3.5),
+                (r"हिस्सा\s*वाटप|सहहिस्सेदार|co[\s\-]*sharers", 3.0),
+                (r"मृत्यू\s*नोंद|मृत्युपत्र|will\s*deed", 2.5),
             ],
         }
 

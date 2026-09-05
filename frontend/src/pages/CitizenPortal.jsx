@@ -9,13 +9,14 @@ export default function CitizenPortalPage() {
   const { currentLanguage } = useAppStore()
   const lang = currentLanguage || 'mr'
 
-  // Dynamic Document Types translated on-the-fly
+  // Dynamic 10 Land & Property Document Types translated on-the-fly
   const documentTypes = [
     {
       id: '7_12',
       code: 'VILLAGE_FORM_7_12',
+      category: 'rural',
       icon: 'description',
-      badge: t('gatNoLabel', lang) + ' 7/12',
+      badge: 'गाव नमुना ७/१२',
       title: t('docType712Title', lang),
       description: t('docType712Desc', lang),
       identifierLabel: t('gatNoLabel', lang) + ' / ' + t('searchPlaceholder', lang),
@@ -24,8 +25,9 @@ export default function CitizenPortalPage() {
     {
       id: '8_a',
       code: 'VILLAGE_FORM_8A',
+      category: 'rural',
       icon: 'format_list_bulleted',
-      badge: t('khataNoLabel', lang) + ' 8-A',
+      badge: 'गाव नमुना ८-अ',
       title: t('docType8ATitle', lang),
       description: t('docType8ADesc', lang),
       identifierLabel: t('khataNoLabel', lang),
@@ -34,32 +36,90 @@ export default function CitizenPortalPage() {
     {
       id: 'property_card',
       code: 'PROPERTY_CARD',
+      category: 'urban',
       icon: 'location_city',
-      badge: 'CTS / Property',
+      badge: 'CTS / मालमत्ता पत्रक',
       title: t('docTypePropertyCardTitle', lang),
       description: t('docTypePropertyCardDesc', lang),
-      identifierLabel: 'CTS / Property Number',
-      placeholder: 'CTS-8402/A',
+      identifierLabel: 'City Survey / CTS Number',
+      placeholder: 'CTS-4520, CTS-8402/A',
     },
     {
       id: 'ferfar',
       code: 'MUTATION_REGISTER',
+      category: 'legal',
       icon: 'history_edu',
-      badge: 'Ferfar',
+      badge: 'गाव नमुना ६ फेरफार',
       title: t('docTypeFerfarTitle', lang),
       description: t('docTypeFerfarDesc', lang),
-      identifierLabel: 'Mutation / Ferfar #',
-      placeholder: 'Ferfar #1842',
+      identifierLabel: 'Mutation / Ferfar Entry #',
+      placeholder: 'Ferfar #1842, #2481',
     },
     {
       id: 'sale_deed',
       code: 'SALE_DEED',
+      category: 'legal',
       icon: 'gavel',
-      badge: 'Deed',
+      badge: 'नोंदणीकृत खरेदीखत',
       title: t('docTypeSaleDeedTitle', lang),
       description: t('docTypeSaleDeedDesc', lang),
-      identifierLabel: 'Registration Deed Number',
-      placeholder: 'D-2026/PUN/9812',
+      identifierLabel: 'Sub-Registrar Deed Number',
+      placeholder: 'D-2026/PUN/8921',
+    },
+    {
+      id: 'search_report',
+      code: 'SEARCH_REPORT',
+      category: 'legal',
+      icon: 'find_in_page',
+      badge: 'बोजा व शोध अहवाल',
+      title: t('docTypeSearchReportTitle', lang),
+      description: t('docTypeSearchReportDesc', lang),
+      identifierLabel: '30-Yr Search / Index-II No.',
+      placeholder: 'SR-2026/PUN/4019',
+    },
+    {
+      id: 'gat_map',
+      code: 'GAT_NAKASHA_MAP',
+      category: 'rural',
+      icon: 'map',
+      badge: 'गट नकाशा / टिपण',
+      title: t('docTypeGatMapTitle', lang),
+      description: t('docTypeGatMapDesc', lang),
+      identifierLabel: 'Cadastral Survey Map / Gat No.',
+      placeholder: 'MAP-142/3A, 105/B',
+    },
+    {
+      id: 'na_order',
+      code: 'NA_ORDER_SANAD',
+      category: 'urban',
+      icon: 'domain',
+      badge: 'अकृषिक (NA) सनद',
+      title: t('docTypeNaOrderTitle', lang),
+      description: t('docTypeNaOrderDesc', lang),
+      identifierLabel: 'Collector NA Order No.',
+      placeholder: 'NA-REV/2026/412',
+    },
+    {
+      id: 'gift_deed',
+      code: 'GIFT_RELINQUISHMENT_DEED',
+      category: 'legal',
+      icon: 'volunteer_activism',
+      badge: 'बक्षीस / हक्कसोड',
+      title: t('docTypeGiftDeedTitle', lang),
+      description: t('docTypeGiftDeedDesc', lang),
+      identifierLabel: 'Gift / Release Registration No.',
+      placeholder: 'GD-2026/PUN/5512',
+    },
+    {
+      id: 'partition_deed',
+      code: 'PARTITION_HEIRSHIP_DEED',
+      category: 'legal',
+      icon: 'family_restroom',
+      badge: 'वारस व वाटपपत्र',
+      title: t('docTypePartitionTitle', lang),
+      description: t('docTypePartitionDesc', lang),
+      identifierLabel: 'Heirship Case / Partition No.',
+      placeholder: 'WARAS-2026/088',
     },
   ]
 
@@ -280,17 +340,22 @@ export default function CitizenPortalPage() {
 
       {/* SECTION 1: Select Document Type Grid */}
       <section className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-extrabold text-lg text-slate-900 flex items-center gap-2">
-            <span className="w-2.5 h-6 bg-amber-500 rounded-full inline-block"></span>
-            {t('step1DocType', lang)}
-          </h2>
-          <span className="text-xs text-slate-500">
-            {t('selectedDocBadge', lang)} <strong className="text-slate-900">{activeDocType.badge}</strong>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div>
+            <h2 className="font-extrabold text-lg text-slate-900 flex items-center gap-2">
+              <span className="w-2.5 h-6 bg-amber-500 rounded-full inline-block"></span>
+              {t('step1DocType', lang)}
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              निवडा: <strong className="text-slate-900">{activeDocType.badge}</strong> — {activeDocType.title}
+            </p>
+          </div>
+          <span className="text-xs bg-amber-100 text-amber-900 font-bold px-3 py-1 rounded-full border border-amber-300 self-start sm:self-auto">
+            10 Official Land &amp; Property Types
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
           {documentTypes.map((doc) => {
             const isSelected = selectedDocTypeId === doc.id
             return (
@@ -300,9 +365,9 @@ export default function CitizenPortalPage() {
                   setSelectedDocTypeId(doc.id)
                   setMatchedRecord(null)
                 }}
-                className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between relative overflow-hidden group ${
+                className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between relative overflow-hidden group min-h-[160px] ${
                   isSelected
-                    ? 'bg-amber-50/50 border-amber-500 ring-2 ring-amber-400/40 shadow-md'
+                    ? 'bg-amber-50/70 border-amber-500 ring-2 ring-amber-400/40 shadow-md transform -translate-y-0.5'
                     : 'bg-white border-slate-200 hover:border-slate-400 hover:shadow-sm'
                 }`}
               >
@@ -312,18 +377,20 @@ export default function CitizenPortalPage() {
                   </div>
                 )}
                 <div>
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 transition-colors ${
-                    isSelected ? 'bg-amber-500 text-slate-950 shadow-sm' : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
-                  }`}>
-                    <span className="material-symbols-outlined text-xl">{doc.icon}</span>
+                  <div className="flex items-center justify-between mb-2.5">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
+                      isSelected ? 'bg-amber-500 text-slate-950 shadow-sm' : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
+                    }`}>
+                      <span className="material-symbols-outlined text-lg">{doc.icon}</span>
+                    </div>
+                    <span className="text-[9.5px] font-bold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                      {doc.badge}
+                    </span>
                   </div>
-                  <span className="text-[10px] font-bold text-amber-700 bg-amber-100/70 px-2 py-0.5 rounded-md uppercase tracking-wider">
-                    {doc.badge}
-                  </span>
-                  <h3 className="font-bold text-sm text-slate-900 mt-2 leading-tight">
+                  <h3 className="font-bold text-xs text-slate-900 leading-snug line-clamp-2">
                     {doc.title}
                   </h3>
-                  <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                  <p className="text-[10.5px] text-slate-500 mt-1 leading-relaxed line-clamp-2">
                     {doc.description}
                   </p>
                 </div>
