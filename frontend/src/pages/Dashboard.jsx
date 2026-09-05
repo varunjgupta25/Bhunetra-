@@ -77,91 +77,103 @@ export default function DashboardPage() {
         </Link>
       </section>
 
-      {/* KPI Cards Bento Grid */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-        {/* Card 1: Total Records Digitized */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
-          <div className="flex justify-between items-start mb-4">
-            <span className="font-bold text-xs text-slate-500 uppercase tracking-wider">
+      {/* KPI Cards Bento Grid (SIH Vibrant Gradient & Watermark Style) */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        {/* Card 1: Total Records Digitized (Blue Gradient) */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0ea5e9] to-[#2563eb] text-white p-6 shadow-md flex flex-col justify-between min-h-[140px] transform hover:-translate-y-0.5 transition-all">
+          <div className="absolute -right-2 -bottom-2 opacity-20 pointer-events-none">
+            <span className="material-symbols-outlined text-8xl">description</span>
+          </div>
+          <div className="flex justify-between items-start mb-2 relative z-10">
+            <span className="font-bold text-xs uppercase tracking-wider text-sky-100">
               {t('totalDigitized', lang)}
             </span>
-            <span className="material-symbols-outlined text-amber-500" data-icon="description">
-              description
+            <span className="bg-white/20 p-1.5 rounded-lg backdrop-blur-xs">
+              <span className="material-symbols-outlined text-white text-lg">description</span>
             </span>
           </div>
-          <div>
-            <div className="text-3xl font-extrabold text-slate-900">
+          <div className="relative z-10">
+            <div className="text-3xl font-black text-white">
               {stats.totalProcessed.toLocaleString()}
             </div>
-            <div className="text-xs font-bold text-emerald-600 mt-1 flex items-center gap-1">
+            <div className="text-xs font-bold text-sky-100 mt-1 flex items-center gap-1">
               <span className="material-symbols-outlined text-sm">arrow_upward</span>
               +84 {t('today', lang)}
             </div>
           </div>
         </div>
 
-        {/* Card 2: Average Confidence */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between relative overflow-hidden">
-          <div className="flex justify-between items-start mb-4 relative z-10">
-            <span className="font-bold text-xs text-slate-500 uppercase tracking-wider">
+        {/* Card 2: Average Confidence (Green Gradient) */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#84cc16] to-[#16a34a] text-white p-6 shadow-md flex flex-col justify-between min-h-[140px] transform hover:-translate-y-0.5 transition-all">
+          <div className="absolute -right-2 -bottom-2 opacity-20 pointer-events-none">
+            <span className="material-symbols-outlined text-8xl">analytics</span>
+          </div>
+          <div className="flex justify-between items-start mb-2 relative z-10">
+            <span className="font-bold text-xs uppercase tracking-wider text-lime-100">
               {t('avgConfidence', lang)}
             </span>
-            <span className="material-symbols-outlined text-blue-600" data-icon="analytics">
-              analytics
+            <span className="bg-white/20 p-1.5 rounded-lg backdrop-blur-xs">
+              <span className="material-symbols-outlined text-white text-lg">analytics</span>
             </span>
           </div>
           <div className="relative z-10">
-            <div className="text-3xl font-extrabold text-slate-900">
+            <div className="text-3xl font-black text-white">
               {(stats.averageConfidence * 100).toFixed(1)}%
             </div>
-            <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[11px] border border-emerald-300">
+            <div className="text-xs font-bold text-lime-100 mt-1 flex items-center gap-1">
+              <span className="material-symbols-outlined text-sm">verified</span>
               {t('highConfidence', lang)}
             </div>
           </div>
         </div>
 
-        {/* Card 3: Auto-Approved Records */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
-          <div className="flex justify-between items-start mb-4">
-            <span className="font-bold text-xs text-slate-500 uppercase tracking-wider">
+        {/* Card 3: Auto-Approved Records (Purple Gradient) */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#a855f7] to-[#4f46e5] text-white p-6 shadow-md flex flex-col justify-between min-h-[140px] transform hover:-translate-y-0.5 transition-all">
+          <div className="absolute -right-2 -bottom-2 opacity-20 pointer-events-none">
+            <span className="material-symbols-outlined text-8xl">task_alt</span>
+          </div>
+          <div className="flex justify-between items-start mb-2 relative z-10">
+            <span className="font-bold text-xs uppercase tracking-wider text-purple-100">
               {t('autoApproved', lang)}
             </span>
-            <span className="material-symbols-outlined text-emerald-600" data-icon="verified">
-              verified
+            <span className="bg-white/20 p-1.5 rounded-lg backdrop-blur-xs">
+              <span className="material-symbols-outlined text-white text-lg">task_alt</span>
             </span>
           </div>
-          <div>
-            <div className="text-3xl font-extrabold text-slate-900">
+          <div className="relative z-10">
+            <div className="text-3xl font-black text-white">
               {stats.autoApproved.toLocaleString()}
             </div>
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-xs text-purple-100 mt-1">
               {stats.totalProcessed > 0
                 ? ((stats.autoApproved / stats.totalProcessed) * 100).toFixed(1)
-                : '94.1'}
-              % bypass rate
+                : '94.1'}% bypass rate
             </div>
           </div>
         </div>
 
-        {/* Card 4: Verification Backlog */}
+        {/* Card 4: Verification Backlog (Teal/Cyan Gradient) */}
         <Link
           to="/verification"
-          className="bg-amber-50/80 rounded-2xl shadow-sm border border-amber-300 p-6 flex flex-col justify-between hover:border-amber-500 transition-colors"
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#06b6d4] to-[#0284c7] text-white p-6 shadow-md flex flex-col justify-between min-h-[140px] transform hover:-translate-y-0.5 transition-all group"
         >
-          <div className="flex justify-between items-start mb-4">
-            <span className="font-bold text-xs text-amber-800 uppercase tracking-wider">
+          <div className="absolute -right-2 -bottom-2 opacity-20 pointer-events-none">
+            <span className="material-symbols-outlined text-8xl">pending_actions</span>
+          </div>
+          <div className="flex justify-between items-start mb-2 relative z-10">
+            <span className="font-bold text-xs uppercase tracking-wider text-cyan-100">
               {t('pendingQueue', lang)}
             </span>
-            <span className="material-symbols-outlined text-amber-700" data-icon="pending_actions">
-              pending_actions
+            <span className="bg-white/20 p-1.5 rounded-lg backdrop-blur-xs">
+              <span className="material-symbols-outlined text-white text-lg">pending_actions</span>
             </span>
           </div>
-          <div>
-            <div className="text-3xl font-extrabold text-amber-950">
+          <div className="relative z-10">
+            <div className="text-3xl font-black text-white">
               {pendingVerificationCount}
             </div>
-            <div className="text-xs font-bold text-amber-800 mt-1 flex items-center gap-1">
-              <span className="material-symbols-outlined text-sm">warning</span>
+            <div className="text-xs font-bold text-cyan-100 mt-1 flex items-center gap-1 group-hover:underline">
+              <span className="material-symbols-outlined text-sm">assignment_turned_in</span>
               {t('awaitingVerifier', lang)}
             </div>
           </div>
