@@ -2,12 +2,10 @@ import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAppStore } from '@/store/useAppStore'
 import { CONSTITUTION_22_LANGUAGES, t } from '@/utils/languages'
-import { SihTeamModal } from '@/components/SihTeamModal'
 
 export function Navbar() {
   const location = useLocation()
   const [fontSize, setFontSize] = useState('normal')
-  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false)
 
   const {
     user,
@@ -78,14 +76,6 @@ export function Navbar() {
           <span className="font-semibold text-amber-400">{t('headerGovIndia', lang)}</span>
           <span className="hidden sm:inline text-slate-400">|</span>
           <span className="hidden sm:inline font-semibold text-slate-200">{t('headerDept', lang)}</span>
-          <button
-            onClick={() => setIsTeamModalOpen(true)}
-            type="button"
-            className="hidden md:inline-flex items-center gap-1 bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 px-2.5 py-0.5 rounded-full border border-amber-400/40 font-bold transition-all cursor-pointer shadow-xs"
-          >
-            <span>💡</span>
-            <span>SIH 2026 · Team Code.IT</span>
-          </button>
         </div>
         <div className="flex items-center gap-4">
           {/* Accessibility controls */}
@@ -266,12 +256,6 @@ export function Navbar() {
           })}
         </nav>
       )}
-
-      {/* Smart India Hackathon 2026 Team Details Modal */}
-      <SihTeamModal
-        isOpen={isTeamModalOpen}
-        onClose={() => setIsTeamModalOpen(false)}
-      />
     </>
   )
 }
