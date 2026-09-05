@@ -116,48 +116,90 @@ export function PipelineLiveStatusWidget() {
         </div>
 
         {/* Pipeline Step Visualizer */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
           {/* Step 1 */}
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs shrink-0">
-              ✓
+          <div className="p-3 bg-emerald-50/60 dark:bg-slate-800/80 rounded-xl border border-emerald-200 dark:border-emerald-800/60 flex items-center gap-2.5 min-w-0 shadow-xs">
+            <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+              <span className="material-symbols-outlined text-[15px]">check</span>
             </div>
-            <div>
-              <p className="text-xs font-bold text-slate-900">{t('stepStorage', lang)}</p>
-              <p className="text-[10px] text-slate-500">File encrypted</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-slate-900 dark:text-white leading-tight truncate">
+                {t('stepStorage', lang)}
+              </p>
+              <p className="text-[10.5px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                File Encrypted
+              </p>
             </div>
           </div>
 
           {/* Step 2 */}
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs shrink-0">
-              ✓
+          <div className="p-3 bg-emerald-50/60 dark:bg-slate-800/80 rounded-xl border border-emerald-200 dark:border-emerald-800/60 flex items-center gap-2.5 min-w-0 shadow-xs">
+            <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+              <span className="material-symbols-outlined text-[15px]">check</span>
             </div>
-            <div>
-              <p className="text-xs font-bold text-slate-900">{t('stepOcr', lang)}</p>
-              <p className="text-[10px] text-slate-500">Marathi Extracted</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-slate-900 dark:text-white leading-tight truncate">
+                {t('stepOcr', lang)}
+              </p>
+              <p className="text-[10.5px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                OCR Extracted
+              </p>
             </div>
           </div>
 
           {/* Step 3 */}
-          <div className="p-3 bg-amber-50 rounded-xl border border-amber-300 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center font-bold text-xs shrink-0">
-              {processingStep === 3 && isProcessing ? '🔄' : '✓'}
+          <div className={`p-3 rounded-xl border flex items-center gap-2.5 min-w-0 shadow-xs transition-all ${
+            processingStep === 3 && isProcessing
+              ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-400 ring-2 ring-amber-400/30'
+              : processingStep > 3
+              ? 'bg-emerald-50/60 dark:bg-slate-800/80 border-emerald-200 dark:border-emerald-800/60'
+              : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/60'
+          }`}>
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 shadow-xs ${
+              processingStep === 3 && isProcessing
+                ? 'bg-amber-500 text-slate-950 animate-pulse'
+                : processingStep > 3
+                ? 'bg-emerald-600 text-white'
+                : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+            }`}>
+              {processingStep === 3 && isProcessing ? (
+                <span className="material-symbols-outlined text-[15px] animate-spin">sync</span>
+              ) : processingStep > 3 ? (
+                <span className="material-symbols-outlined text-[15px]">check</span>
+              ) : (
+                <span className="material-symbols-outlined text-[15px]">check</span>
+              )}
             </div>
-            <div>
-              <p className="text-xs font-bold text-slate-900">{t('stepStructuring', lang)}</p>
-              <p className="text-[10px] text-slate-600">Schema Mapping</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-slate-900 dark:text-white leading-tight truncate">
+                {t('stepStructuring', lang)}
+              </p>
+              <p className="text-[10.5px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                {processingStep === 3 && isProcessing ? 'Mapping schema...' : 'Schema Mapping'}
+              </p>
             </div>
           </div>
 
           {/* Step 4 */}
-          <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-300 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
-              ✓
+          <div className={`p-3 rounded-xl border flex items-center gap-2.5 min-w-0 shadow-xs transition-all ${
+            processingStep === 4
+              ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-400 ring-2 ring-emerald-400/30'
+              : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/60'
+          }`}>
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 shadow-xs ${
+              processingStep === 4
+                ? 'bg-emerald-600 text-white'
+                : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+            }`}>
+              <span className="material-symbols-outlined text-[15px]">verified</span>
             </div>
-            <div>
-              <p className="text-xs font-bold text-slate-900">{t('stepValidation', lang)}</p>
-              <p className="text-[10px] text-slate-600">Verified</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-slate-900 dark:text-white leading-tight truncate">
+                {t('stepValidation', lang)}
+              </p>
+              <p className="text-[10.5px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                {processingStep === 4 ? 'Verified' : 'Pending Verification'}
+              </p>
             </div>
           </div>
         </div>
@@ -709,7 +751,7 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
                   </div>
                   <div className="w-0.5 h-8 mt-1.5 bg-primary"></div>
                 </div>
-                <div className="pt-1">
+                <div className="pt-1 min-w-0 flex-1">
                   <p className="font-body-md text-body-md text-on-surface font-semibold">
                     {t('stepStorage', lang)}
                   </p>
@@ -733,7 +775,7 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
                   </div>
                   <div className="w-0.5 h-8 mt-1.5 bg-primary"></div>
                 </div>
-                <div className="pt-1">
+                <div className="pt-1 min-w-0 flex-1">
                   <p className="font-body-md text-body-md text-on-surface font-semibold">
                     {t('stepOcr', lang)}
                   </p>
@@ -765,7 +807,7 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
                   </div>
                   <div className="w-0.5 h-8 mt-1.5 bg-outline-variant/40"></div>
                 </div>
-                <div className="pt-1">
+                <div className="pt-1 min-w-0 flex-1">
                   <p className="font-body-md text-body-md text-on-surface font-semibold text-primary">
                     {t('stepStructuring', lang)}
                   </p>
@@ -788,7 +830,7 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
                     <span className="material-symbols-outlined text-sm">verified</span>
                   </div>
                 </div>
-                <div className={`pt-1 ${processingStep === 4 ? 'opacity-100' : 'opacity-50'}`}>
+                <div className={`pt-1 min-w-0 flex-1 ${processingStep === 4 ? 'opacity-100' : 'opacity-50'}`}>
                   <p className="font-body-md text-body-md text-on-surface font-semibold">
                     {t('stepValidation', lang)}
                   </p>
