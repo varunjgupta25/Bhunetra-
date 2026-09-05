@@ -1,0 +1,162 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1100" width="100%" height="100%" style="background:#FAF8F5;font-family:'Noto Sans Devanagari', 'Mukta', 'Segoe UI', Arial, sans-serif;">
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e2e8f0" stroke-width="0.5" opacity="0.3"/>
+    </pattern>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <!-- Document Page Base -->
+  <rect width="800" height="1100" fill="#FCFAF7"/>
+  <rect width="800" height="1100" fill="url(#grid)"/>
+
+  <!-- Border Frame -->
+  <rect x="25" y="25" width="750" height="1050" fill="none" stroke="#d97706" stroke-width="3" rx="8"/>
+  <rect x="32" y="32" width="736" height="1036" fill="none" stroke="#0f2c59" stroke-width="1" rx="6" stroke-dasharray="8,4"/>
+
+  <!-- Diagonal Watermark -->
+  <g transform="translate(400, 550) rotate(-35)">
+    <text x="0" y="0" font-size="38" font-weight="900" fill="rgba(15, 44, 89, 0.05)" text-anchor="middle" letter-spacing="4">BHUNETRA · MAHARASHTRA STATE DILRMP</text>
+  </g>
+
+  <!-- Government Emblem & Header -->
+  <g transform="translate(400, 65)">
+    <circle cx="0" cy="0" r="24" fill="#0f2c59" opacity="0.1"/>
+    <text x="0" y="6" font-size="22" text-anchor="middle">🏛️</text>
+    <text x="0" y="34" font-size="13" font-weight="800" fill="#0f2c59" text-anchor="middle" letter-spacing="1">महाराष्ट्र शासन — महसूल व वन विभाग</text>
+    <text x="0" y="50" font-size="10" font-weight="600" fill="#64748b" text-anchor="middle">DIGITAL INDIA LAND RECORDS MODERNIZATION PROGRAMME (DILRMP)</text>
+    <text x="0" y="72" font-size="16" font-weight="900" fill="#0f2c59" text-anchor="middle">गाव नमुना ७/१२ उतारा (गाव नमुना ७/१२)</text>
+  </g>
+
+  <!-- Verification Security Bar -->
+  <g transform="translate(50, 155)">
+    <rect width="700" height="30" fill="#0f2c59" rx="4"/>
+    <text x="15" y="20" font-size="10" font-weight="800" fill="#fbbf24" letter-spacing="0.5">दस्तऐवज ओळख क्र: REC-712-PUN-002</text>
+    <text x="685" y="20" font-size="10" font-weight="800" fill="#ffffff" text-anchor="end">तपासणी स्थिती: 98.6% AUTHENTIC</text>
+  </g>
+
+  <!-- Geographic Location Section -->
+  <g transform="translate(50, 200)">
+    <rect width="700" height="60" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" rx="4"/>
+    <text x="15" y="25" font-size="11" font-weight="700" fill="#475569">जिल्हा (District): <tspan font-weight="900" fill="#0f172a">पुणे (Pune)</tspan></text>
+    <text x="250" y="25" font-size="11" font-weight="700" fill="#475569">तालुका (Tehsil): <tspan font-weight="900" fill="#0f172a">हवेली (Haveli)</tspan></text>
+    <text x="480" y="25" font-size="11" font-weight="700" fill="#475569">गाव (Village): <tspan font-weight="900" fill="#0f172a">खडकवासला (Khadakwasla)</tspan></text>
+    
+    <text x="15" y="48" font-size="11" font-weight="700" fill="#475569">गट / सर्व्हे क्रमांक: <tspan font-weight="900" fill="#0f172a">248</tspan></text>
+    <text x="250" y="48" font-size="11" font-weight="700" fill="#475569">खाते / दस्त नोंद क्र: <tspan font-weight="900" fill="#0f172a">712</tspan></text>
+    <text x="480" y="48" font-size="11" font-weight="700" fill="#475569">प्रमाण / दर्जा: <tspan font-weight="900" fill="#0f172a">डिजिटल प्रमाणित</tspan></text>
+  </g>
+
+  <!-- Main Table Section -->
+  <g transform="translate(50, 275)">
+    <rect width="700" height="420" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="4"/>
+    
+    <!-- Table Header Row -->
+    <rect width="700" height="35" fill="#e2e8f0" rx="3"/>
+    <text x="15" y="22" font-size="11" font-weight="800" fill="#1e293b">तपशील शीर्षक (Attribute)</text>
+    <text x="260" y="22" font-size="11" font-weight="800" fill="#1e293b">नोंद तपशील (Extracted Revenue Record)</text>
+    <text x="560" y="22" font-size="11" font-weight="800" fill="#1e293b">सत्यता पडताळणी</text>
+    
+    <!-- Row 1: Landholder / Title Owner -->
+    <line x1="0" y1="90" x2="700" y2="90" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="15" y="65" font-size="11" font-weight="700" fill="#475569">खातेदार / मालकाचे नाव</text>
+    <text x="15" y="80" font-size="9" fill="#94a3b8">Owner / Landholder Name</text>
+    <text x="260" y="70" font-size="13" font-weight="900" fill="#0f172a">रमेश बाबूराव पाटील व सुरेश पाटील (Joint)</text>
+    <text x="560" y="70" font-size="11" font-weight="800" fill="#16a34a">✔ Verified</text>
+
+    <!-- Row 2: Land Area & Dimensions -->
+    <line x1="0" y1="150" x2="700" y2="150" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="15" y="125" font-size="11" font-weight="700" fill="#475569">एकूण क्षेत्र / भूमापन परिमाण</text>
+    <text x="15" y="140" font-size="9" fill="#94a3b8">Total Land Area / Dimensions</text>
+    <text x="260" y="130" font-size="13" font-weight="900" fill="#0f172a">2.10 Hectare</text>
+    <text x="560" y="130" font-size="11" font-weight="800" fill="#16a34a">✔ Math Valid</text>
+
+    <!-- Row 3: Assessment / Tax -->
+    <line x1="0" y1="210" x2="700" y2="210" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="15" y="185" font-size="11" font-weight="700" fill="#475569">शासकीय आकारणी / कर</text>
+    <text x="15" y="200" font-size="9" fill="#94a3b8">Revenue Tax / Assessment</text>
+    <text x="260" y="190" font-size="12" font-weight="900" fill="#0f172a">₹ 3,200/-</text>
+    <text x="560" y="190" font-size="11" font-weight="800" fill="#16a34a">✔ Tax Paid</text>
+
+    <!-- Row 4: Tenure & Classification -->
+    <line x1="0" y1="270" x2="700" y2="270" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="15" y="245" font-size="11" font-weight="700" fill="#475569">धारणा प्रकार / वर्ग</text>
+    <text x="15" y="260" font-size="9" fill="#94a3b8">Tenure Classification</text>
+    <text x="260" y="250" font-size="12" font-weight="900" fill="#0f172a">भोगवटादार वर्ग - १ (Joint Co-owner)</text>
+    <text x="560" y="250" font-size="11" font-weight="800" fill="#16a34a">✔ Class-1</text>
+
+    <!-- Row 5: Additional Specifics -->
+    <line x1="0" y1="340" x2="700" y2="340" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="15" y="305" font-size="11" font-weight="700" fill="#475569">इतर हक्क, बोजा व फेरफार</text>
+    <text x="15" y="320" font-size="9" fill="#94a3b8">Liens, Mutation &amp; Encumbrance</text>
+    <text x="260" y="310" font-size="10.5" font-weight="700" fill="#334155">0.15 Ha</text>
+    <text x="260" y="328" font-size="10" font-weight="600" fill="#64748b">1.95 Ha</text>
+    <text x="560" y="315" font-size="11" font-weight="800" fill="#16a34a">✔ Clear</text>
+
+    <!-- Row 6: Security Check Hash -->
+    <text x="15" y="375" font-size="10" font-weight="700" fill="#475569">डिजिटल क्रिप्टोग्राफिक हॅश</text>
+    <text x="15" y="390" font-size="9" fill="#94a3b8">SHA-256 State Ledger Hash</text>
+    <text x="260" y="380" font-size="9.5" font-family="monospace" font-weight="700" fill="#475569">e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</text>
+  </g>
+
+  <!-- Forensic Stamp & Verification Section -->
+  <g transform="translate(50, 715)">
+    <!-- Stamp Box -->
+    <g transform="translate(450, 15)">
+      <rect width="230" height="95" fill="none" stroke="#2563eb" stroke-width="2" rx="6" stroke-dasharray="none"/>
+      <circle cx="45" cy="48" r="30" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+      <text x="45" y="53" font-size="18" text-anchor="middle">🏛️</text>
+      <text x="88" y="35" font-size="10" font-weight="900" fill="#1e40af">महसूल विभाग, महाराष्ट्र</text>
+      <text x="88" y="50" font-size="9" font-weight="700" fill="#475569">सक्षम महसूल अधिकारी</text>
+      <text x="88" y="65" font-size="8" font-family="monospace" fill="#64748b">DS-2026-NIC-MH-AUTH_2</text>
+      <text x="88" y="80" font-size="8" font-weight="800" fill="#15803d">✔ Digitally Verified</text>
+    </g>
+
+    <!-- Barcode & QR Stamp -->
+    <g transform="translate(20, 20)">
+      <rect width="180" height="70" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1" rx="4"/>
+      <!-- Simulated Barcode Bars -->
+      <g transform="translate(15, 12)">
+        <rect x="0" width="3" height="32" fill="#0f172a"/>
+        <rect x="5" width="2" height="32" fill="#0f172a"/>
+        <rect x="9" width="4" height="32" fill="#0f172a"/>
+        <rect x="15" width="2" height="32" fill="#0f172a"/>
+        <rect x="19" width="5" height="32" fill="#0f172a"/>
+        <rect x="26" width="3" height="32" fill="#0f172a"/>
+        <rect x="31" width="1" height="32" fill="#0f172a"/>
+        <rect x="34" width="4" height="32" fill="#0f172a"/>
+        <rect x="40" width="2" height="32" fill="#0f172a"/>
+        <rect x="44" width="6" height="32" fill="#0f172a"/>
+        <rect x="52" width="2" height="32" fill="#0f172a"/>
+        <rect x="56" width="4" height="32" fill="#0f172a"/>
+        <rect x="62" width="3" height="32" fill="#0f172a"/>
+        <rect x="67" width="1" height="32" fill="#0f172a"/>
+        <rect x="70" width="5" height="32" fill="#0f172a"/>
+        <rect x="77" width="2" height="32" fill="#0f172a"/>
+        <rect x="81" width="4" height="32" fill="#0f172a"/>
+        <rect x="87" width="3" height="32" fill="#0f172a"/>
+        <rect x="92" width="5" height="32" fill="#0f172a"/>
+        <rect x="99" width="2" height="32" fill="#0f172a"/>
+        <rect x="103" width="4" height="32" fill="#0f172a"/>
+        <rect x="109" width="2" height="32" fill="#0f172a"/>
+        <rect x="113" width="5" height="32" fill="#0f172a"/>
+        <rect x="120" width="3" height="32" fill="#0f172a"/>
+        <rect x="125" width="2" height="32" fill="#0f172a"/>
+        <rect x="129" width="4" height="32" fill="#0f172a"/>
+        <rect x="135" width="3" height="32" fill="#0f172a"/>
+        <rect x="140" width="4" height="32" fill="#0f172a"/>
+        <rect x="146" width="2" height="32" fill="#0f172a"/>
+      </g>
+      <text x="90" y="58" font-size="8" font-family="monospace" text-anchor="middle" fill="#475569">MH-REC-712-PUN-002</text>
+    </g>
+  </g>
+
+  <!-- Legal Disclaimer Footer -->
+  <g transform="translate(50, 1020)">
+    <line x1="0" y1="0" x2="700" y2="0" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="0" y="16" font-size="8.5" fill="#64748b">सूचना: हा दस्तऐवज महाराष्ट्र जमीन महसूल संहिता १९६६ अंतर्गत डिजिटल स्वाक्षरीने तयार करण्यात आला आहे. अधिकृत तपासणीसाठी https://bhulekh.mahabhumi.gov.in वापरावे.</text>
+    <text x="700" y="16" font-size="8.5" font-weight="700" fill="#0f2c59" text-anchor="end">BHUNETRA FORENSIC SUITE 2026</text>
+  </g>
+</svg>
