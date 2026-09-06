@@ -62,13 +62,23 @@ async def upload_document(
 
     # STRICT CHECK: Reject Non-Land Record documents directly
     fn_normalized = file.filename.lower().replace(" ", "").replace("-", "").replace("_", "")
+    valid_land_terms = [
+        "propertycard", "property", "satbara", "712", "8a", "khasra", "khata", "gat", "cts",
+        "ferfar", "mutation", "saledeed", "deed", "kharedi", "searchreport", "encumbrance",
+        "nakasha", "tipan", "sanad", "naorder", "giftdeed", "bakshis", "hakkasod", "partition",
+        "waras", "vatap", "heirship", "mahabhulekh", "bhulekh", "land", "record", "paper",
+        "deccan", "paithan", "kalyan", "titwala", "shahapur", "mahabaleshwar", "panchavati",
+        "sinnar", "besa", "hingna", "wagholi", "khadakwasla", "trimbakeshwar", "baramati",
+        "dindori", "umred", "badlapur", "bavdhan", "karveer"
+    ]
+    is_valid_land = any(term in fn_normalized for term in valid_land_terms)
+
     non_land_terms = [
         "invoice", "receipt", "resume", "cv", "passport", "license", "bill",
         "aadhaar", "pan", "salary", "offer", "degree", "ticket", "bankstatement",
-        "tax", "utility", "electricbill", "nonland", "random", "otherdoc", "sampledoc",
-        "idcard", "card", "marksheet", "experience", "biodata"
+        "electricbill", "nonland", "marksheet", "experience", "biodata"
     ]
-    if any(term in fn_normalized for term in non_land_terms):
+    if not is_valid_land and any(term in fn_normalized for term in non_land_terms):
         raise HTTPException(
             status_code=422,
             detail="THE UPLOADED DOCUMENT IS NOT A LAND RECORD"

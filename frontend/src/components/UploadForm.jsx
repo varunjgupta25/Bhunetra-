@@ -22,28 +22,41 @@ const ALLOWED_MIME_TYPES = [
 // Strict Land Record Verification Utility
 export function isLandRecordDocument(fileName) {
   if (!fileName) return true
-  const fn = fileName.toLowerCase().replace(/[^a-z0-9]/g, '')
+  const raw = String(fileName).toLowerCase()
+  const fn = raw.replace(/[^a-z0-9]/g, '')
 
-  // Explicit Non-Land Record terms to strictly block
+  // 1. If it matches any catalog demo document (all 10 categories), it is 100% a valid land record
+  const matchedDemo = findDemoDocumentByFileName(fileName)
+  if (matchedDemo) return true
+
+  // 2. Strong valid land record indicators (all 10 revenue/property types)
+  const validLandKeywords = [
+    'propertycard', 'property', 'satbara', '712', '7-12', '7_12', '8a', '8-a', '8_a',
+    'khasra', 'khata', 'gat', 'gut', 'cts', 'ferfar', 'mutation', 'saledeed', 'deed',
+    'kharedikhat', 'kharedi', 'searchreport', 'encumbrance', 'nakasha', 'gatmap', 'tipan',
+    'naorder', 'nasanad', 'sanad', 'giftdeed', 'bakshis', 'hakkasod', 'partition',
+    'waras', 'vatap', 'heirship', 'mahabhulekh', 'bhulekh', 'bhoomi', 'land', 'record',
+    'deccan', 'paithan', 'kalyan', 'titwala', 'shahapur', 'mahabaleshwar', 'panchavati',
+    'sinnar', 'besa', 'hingna', 'wagholi', 'khadakwasla', 'trimbakeshwar', 'baramati',
+    'dindori', 'umred', 'badlapur', 'bavdhan', 'karveer', 'kolhapur', 'nagpur', 'nashik',
+    'pune', 'mumbai', 'thane', 'tehsil', 'taluka', 'district', 'survey', 'forged', 'tampered',
+    'unauthorized', 'mismatched', 'paper', 'demo'
+  ]
+  if (validLandKeywords.some((kw) => fn.includes(kw.replace(/[^a-z0-9]/g, '')))) {
+    return true
+  }
+
+  // 3. Explicit Non-Land Record terms to strictly block (only check if NOT a valid land record)
   const nonLandKeywords = [
-    'invoice', 'receipt', 'resume', 'cv', 'passport', 'license', 'bill',
-    'aadhaar', 'pan', 'salary', 'offer', 'degree', 'ticket', 'bankstatement',
-    'tax', 'utility', 'electricbill', 'nonland', 'random', 'otherdoc', 'sampledoc',
-    'idcard', 'card', 'marksheet', 'experience', 'biodata', 'photo'
+    'invoice', 'receipt', 'resume', 'cv', 'passport', 'drivinglicense', 'license', 'bill',
+    'aadhaar', 'pan', 'salary', 'payslip', 'offerletter', 'degree', 'ticket', 'bankstatement',
+    'electricbill', 'utilitybill', 'nonland', 'marksheet', 'biodata', 'experiencecertificate'
   ]
   if (nonLandKeywords.some((kw) => fn.includes(kw))) {
     return false
   }
 
-  // Valid Land Record indicators
-  const validLandKeywords = [
-    'paper', '712', '7-12', '7_12', 'satbara', 'mahabhulekh', 'khasra', 'khata',
-    'wagholi', 'khadakwasla', 'trimbakeshwar', 'forged', 'unauthorized', 'extract',
-    '8a', '8-a', 'bhoomi', 'bhulekh', 'gut', 'gat', 'land', 'record', 'pune', 'nashik',
-    'mumbai', 'nagpur', 'thane', 'tehsil', 'district', 'survey', 'property', '712extract',
-    'mismatched', 'demo'
-  ]
-  return validLandKeywords.some((kw) => fn.includes(kw))
+  return true
 }
 
 export function PipelineLiveStatusWidget() {

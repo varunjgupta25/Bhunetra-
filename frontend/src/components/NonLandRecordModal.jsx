@@ -31,10 +31,10 @@ export function NonLandRecordModal({ isOpen, onClose, fileName }) {
             <span>Why was this document rejected?</span>
           </p>
           <p className="leading-relaxed">
-            Bhunetra AI is strictly built for <strong>Mahabhulekh Land Records (7/12 सातबारा &amp; 8A Extracts)</strong>. Non-land record files (invoices, ID cards, bills, resumes, general PDFs) are directly blocked to maintain Indian data sovereignty &amp; system integrity.
+            Bhunetra AI is strictly built for <strong>Mahabhulekh &amp; Revenue Land Records (7/12, 8-A, Property Cards, Ferfar Mutation, Sale Deeds, Search Reports, Cadastral Maps, NA Sanads, Gift Deeds, Partition Deeds)</strong>. Non-land record files (invoices, ID cards, bills, resumes, general PDFs) are directly blocked to maintain Indian data sovereignty &amp; system integrity.
           </p>
           <p className="text-[11px] text-amber-800 font-semibold bg-amber-50 p-2 rounded border border-amber-200">
-            💡 Please upload an official 7/12 (सातबारा) land extract or one of the official demo papers (Paper 1, Paper 2, Paper 3, or Paper 4).
+            💡 Please upload any of the 10 recognized land revenue document categories or official demo papers.
           </p>
         </div>
 
