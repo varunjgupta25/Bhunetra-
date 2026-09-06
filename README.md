@@ -1,6 +1,6 @@
 # Bhunetra (भूनेत्र) 🇮🇳
 > **Sovereign, Offline-First Land Record Digitization, Forensic Verification & Citizen Gateway System**  
-> *Developed for Indian Land Governance & Built for Shesh OS*
+> *Developed for Indian Land Governance*
 
 [![Bhunetra Quality Gates](https://github.com/varunjgupta25/Bhunetra-/actions/workflows/quality-gates.yml/badge.svg)](https://github.com/varunjgupta25/Bhunetra-/actions/workflows/quality-gates.yml)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
