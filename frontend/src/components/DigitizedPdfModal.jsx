@@ -1,390 +1,536 @@
-import React, { useState } from 'react'
+/**
+ * DigitizedPdfModal.jsx
+ * ─────────────────────────────────────────────────────────────────
+ * BHUNETRA — "Download Official Land Record PDF" modal
+ *
+ * Entry points:
+ *   • CitizenPortal.jsx  → verified / forged record
+ *   • Verification.jsx   → OCR-corrected record
+ *
+ * Props (API unchanged):
+ *   isOpen          {boolean}
+ *   onClose         {() => void}
+ *   recordData      {Object}
+ *   onConfirmExport {(langCode: string) => void}  optional
+ *
+ * Language state is owned here. When selectedLanguage changes:
+ *   → preview labels re-render immediately via t(key, selectedLanguage)
+ *   → download uses the same selectedLanguage
+ * ─────────────────────────────────────────────────────────────────
+ */
+
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { useAppStore } from '@/store/useAppStore'
 import { CONSTITUTION_22_LANGUAGES } from '@/utils/languages'
+import {
+  generateLandRecordPdf,
+  buildLandRecordPdfData,
+  validateRecordForPdf,
+} from '@/utils/pdfGenerator'
+import { t } from '@/utils/pdfTranslations'
+
+// ─── Constants ────────────────────────────────────────────────────
+
+const FEATURED_LANGUAGES = [
+  { code: 'mr', name: 'मराठी (Marathi)',      icon: '🚩' },
+  { code: 'en', name: 'English (English)',     icon: '🇬🇧' },
+  { code: 'hi', name: 'हिन्दी (Hindi)',         icon: '🇮🇳' },
+  { code: 'gu', name: 'ગુજરાતી (Gujarati)',    icon: '🏛️' },
+  { code: 'kn', name: 'ಕನ್ನಡ (Kannada)',       icon: '🏛️' },
+  { code: 'ta', name: 'தமிழ் (Tamil)',          icon: '🏛️' },
+  { code: 'te', name: 'తెలుగు (Telugu)',        icon: '🏛️' },
+  { code: 'bn', name: 'বাংলা (Bengali)',        icon: '🇧🇩' },
+]
+
+const DASH = '—'
+
+// ─── Sub-components ───────────────────────────────────────────────
+
+/** Single preview field row — hides rows where value is DASH */
+function PreviewField({ label, value, highlight }) {
+  if (!value || value === DASH) return null
+  return (
+    <div className={`flex gap-2 text-xs py-1.5 border-b border-gray-100 last:border-0 ${
+      highlight ? 'bg-amber-50/60 -mx-2 px-2 rounded' : ''
+    }`}>
+      <span className="text-gray-500 shrink-0 w-40 font-medium">{label}</span>
+      <span className="text-gray-900 font-semibold break-words flex-1">{value}</span>
+    </div>
+  )
+}
+
+/** Section heading band */
+function PreviewSection({ title, children }) {
+  return (
+    <div className="mb-4">
+      <div className="bg-[#0F2C59] text-white text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded mb-2">
+        {title}
+      </div>
+      <div className="px-1">{children}</div>
+    </div>
+  )
+}
+
+// ─── Main Modal ───────────────────────────────────────────────────
 
 export function DigitizedPdfModal({ isOpen, onClose, recordData, onConfirmExport }) {
-  const [selectedLanguage, setSelectedLanguage] = useState('mr') // 'mr', 'en', 'hi'
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [showCertificateView, setShowCertificateView] = useState(false)
+  const globalLanguage = useAppStore((state) => state.currentLanguage) || 'mr'
+  const [selectedLanguage, setSelectedLanguage] = useState(globalLanguage)
+  const [step, setStep] = useState('pick')           // 'pick' | 'preview'
+  const [dlState, setDlState] = useState('idle')     // 'idle' | 'generating' | 'done' | 'error'
+  const [dlError, setDlError]  = useState(null)
 
+  const modalRef = useRef(null)
+  const closeRef = useRef(null)
+  const previewCardRef = useRef(null)
+
+  // ── Reset on open ────────────────────────────────────────────────
+  useEffect(() => {
+    if (isOpen) {
+      setStep('pick')
+      setDlState('idle')
+      setDlError(null)
+      setSelectedLanguage(globalLanguage || 'mr')
+      setTimeout(() => closeRef.current?.focus(), 50)
+    }
+  }, [isOpen, globalLanguage])
+
+  // ── ESC closes ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isOpen) return
+    const handler = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [isOpen, onClose])
+
+  // ── Record computation (above early return, not hooks) ───────────
+  const record     = recordData || {}
+  const validation = validateRecordForPdf(record)
+  const rawStatus  = record.status || record.verificationStatus || ''
+  const isForged   = !!record.isForged
+
+  const VERIFIED_STATUSES = new Set(['VERIFIED', 'verified', 'auto-approved', 'approved'])
+  const isVerified  = VERIFIED_STATUSES.has(rawStatus) && !isForged
+  const isPending   = !VERIFIED_STATUSES.has(rawStatus) && !isForged
+
+  // ── Handlers (all useCallback above early return) ─────────────────
+  const handleGoToPreview = useCallback(() => setStep('preview'), [])
+  const handleBackToPick  = useCallback(() => {
+    setStep('pick')
+    setDlState('idle')
+    setDlError(null)
+  }, [])
+  const handleRetry = useCallback(() => {
+    setDlState('idle')
+    setDlError(null)
+  }, [])
+
+  const handleDownload = useCallback(async () => {
+    if (dlState === 'generating' || dlState === 'done') return
+    setDlState('generating')
+    setDlError(null)
+    try {
+      await generateLandRecordPdf(record, {
+        language: selectedLanguage,
+        previewElement: previewCardRef.current,
+      })
+      setDlState('done')
+      if (onConfirmExport) onConfirmExport(selectedLanguage)
+    } catch (err) {
+      console.error('[PDF Generation Error]', err)
+      setDlState('error')
+      setDlError('Unable to generate the PDF. Please try again.')
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [record, selectedLanguage, dlState, onConfirmExport])
+
+  // ── Early return AFTER all hooks ─────────────────────────────────
   if (!isOpen) return null
 
-  const record = recordData || {
-    recordId: 'REC-712-PUNE-0941',
-    khasraNumber: '142/3A',
-    khataNumber: '582',
-    ownerName: 'रमेश विठ्ठल पाटील (Ramesh Vitthal Patil)',
-    ownerNameEn: 'Ramesh Vitthal Patil',
-    village: 'वाघोली (Wagholi)',
-    villageEn: 'Wagholi',
-    tehsil: 'हवेली (Haveli)',
-    tehsilEn: 'Haveli',
-    district: 'पुणे (Pune)',
-    districtEn: 'Pune',
-    landArea: '1.45 हेक्टर (1.45 Hectare)',
-    landAreaEn: '1.45 Hectare',
-    encumbrance: 'बँक ऑफ महाराष्ट्र पीक कर्ज बोजा रु. ५०,०००/-',
-  }
+  // ── Derived (not hooks) ──────────────────────────────────────────
+  // pdfData re-computes every render → whenever selectedLanguage changes,
+  // the component re-renders and pd immediately uses the new language.
+  const pd = validation.valid ? buildLandRecordPdfData(record, selectedLanguage) : null
 
-  const handleGenerate = () => {
-    setIsGenerating(true)
-    setTimeout(() => {
-      setIsGenerating(false)
-      setShowCertificateView(true)
-      if (onConfirmExport) onConfirmExport(selectedLanguage)
-    }, 800)
-  }
+  // Shorthand translator for UI strings (modal chrome, preview labels)
+  const T = (key) => t(key, selectedLanguage)
 
-  const handleDownloadPdf = () => {
-    const title = selectedLanguage === 'en'
-      ? 'GOVERNMENT OF MAHARASHTRA - CERTIFIED LAND RECORD EXTRACT'
-      : selectedLanguage === 'hi'
-      ? 'महाराष्ट्र सरकार - डिजिटल भू-अभिलेख प्रमाण पत्र'
-      : 'महाराष्ट्र शासन - डिजिटल भू-अभिलेख अधिकृत उतारा'
+  const downloadDisabled = dlState === 'generating' || dlState === 'done' || !validation.valid
 
-    const htmlContent = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>${record.khasraNumber || 'Land_Record'}_Certified_Extract</title>
-  <style>
-    @page { size: A4; margin: 15mm; }
-    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; color: #1e293b; line-height: 1.5; }
-    .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; position: relative; }
-    .emblem { font-size: 24px; margin-bottom: 4px; }
-    .govt-title { font-size: 16px; font-weight: bold; letter-spacing: 1px; color: #334155; }
-    .doc-title { font-size: 22px; font-weight: 900; margin: 6px 0; color: #0f172a; }
-    .meta-sub { font-size: 12px; color: #64748b; }
-    .qr-badge { position: absolute; top: 0; right: 0; border: 2px solid #0f172a; padding: 6px 10px; font-family: monospace; font-size: 10px; font-weight: bold; background: #f8fafc; }
-    table { width: 100%; border-collapse: collapse; margin-top: 24px; font-size: 13px; }
-    th, td { border: 1px solid #cbd5e1; padding: 10px 12px; text-align: left; }
-    th { background: #f1f5f9; font-weight: bold; color: #334155; }
-    .alert { padding: 10px 14px; border-radius: 6px; margin-top: 16px; font-weight: bold; font-size: 12px; }
-    .alert-danger { background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; }
-    .alert-success { background: #dcfce7; border: 1px solid #22c55e; color: #166534; }
-    .footer { margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 16px; display: flex; justify-content: space-between; font-size: 11px; color: #64748b; }
-    .sig-box { border: 1px solid #cbd5e1; padding: 8px 16px; background: #f8fafc; border-radius: 6px; text-align: right; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="qr-badge">BHUNETRA NIC<br>VERIFIED ✓</div>
-    <div class="emblem">🏛️</div>
-    <div class="govt-title">${selectedLanguage === 'en' ? 'GOVERNMENT OF MAHARASHTRA • REVENUE DEPARTMENT' : selectedLanguage === 'hi' ? 'महाराष्ट्र सरकार • राजस्व विभाग' : 'महाराष्ट्र शासन • महसूल व वन विभाग'}</div>
-    <div class="doc-title">${title}</div>
-    <div class="meta-sub">गाव (Village): <strong>${record.village || 'Wagholi'}</strong> | तालुका (Tehsil): <strong>${record.tehsil || 'Haveli'}</strong> | जिल्हा (District): <strong>${record.district || 'Pune'}</strong></div>
-  </div>
-
-  ${record.isForged ? `
-  <div class="alert alert-danger">
-    🚨 FRAUD ALERT DETECTED: This record failed authenticity checks. Digital seal hash mismatch and unassigned index in 1,000,000+ Land Database.
-  </div>` : `
-  <div class="alert alert-success">
-    ✔ VERIFIED STATE RECORD: Certified under Maharashtra Land Revenue Code 1966 & Digital India Land Records Modernization Programme (DILRMP).
-  </div>`}
-
-  <table>
-    <tr>
-      <th>गट / सर्व्हे क्र. (Survey / Gat No.)</th>
-      <td><strong>${record.khasraNumber || '142/3A'}</strong></td>
-      <th>खाते क्र. (Khata No.)</th>
-      <td><strong>${record.khataNumber || '582'}</strong></td>
-    </tr>
-    <tr>
-      <th>खातेदाराचे नाव (Owner / Holder)</th>
-      <td colspan="3"><strong>${selectedLanguage === 'en' ? record.ownerNameEn || record.ownerName : record.ownerName}</strong></td>
-    </tr>
-    <tr>
-      <th>एकूण क्षेत्र (Total Land Area)</th>
-      <td>${selectedLanguage === 'en' ? record.landAreaEn || record.landArea : record.landArea}</td>
-      <th>धारणा प्रकार (Tenure Class)</th>
-      <td>${record.ownershipType || 'भोगवटादार वर्ग - १'}</td>
-    </tr>
-    <tr>
-      <th>बोजा / फेरफार तपशील (Liens / Mutation)</th>
-      <td colspan="3" style="${record.isForged ? 'color: #dc2626; font-weight: bold;' : ''}">${selectedLanguage === 'en' ? record.encumbranceEn || record.encumbrance : record.encumbrance}</td>
-    </tr>
-  </table>
-
-  <div class="footer">
-    <div>
-      <div>Verification Hash: <strong>712MV-XG9-2026-BHUNETRA</strong></div>
-      <div>Digitally generated via Bhunetra Sovereign ML Engine</div>
-    </div>
-    <div class="sig-box">
-      <strong>डिजिटल स्वाक्षरी (Digital Signature)</strong><br>
-      तहसीलदार / तलाठी, महसूल विभाग<br>
-      <span style="color: #16a34a; font-weight: bold;">✔ Digitally Signed & Timestamped</span>
-    </div>
-  </div>
-</body>
-</html>`
-
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `Bhunetra_Certified_${record.khasraNumber || 'Land_Record'}_Extract.html`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }
-
-  const handlePrint = () => {
-    window.print()
-  }
-
+  // ══════════════════════════════════════════════════════════════
+  // RENDER
+  // ══════════════════════════════════════════════════════════════
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-surface-container-lowest border border-[#D0E8F5] rounded-3xl shadow-2xl max-w-3xl w-full overflow-hidden transition-all duration-300">
-        {/* Modal Header */}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-label={T('modalTitle')}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div
+        ref={modalRef}
+        className="bg-white border border-[#D0E8F5] rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col"
+      >
+        {/* ── Modal Header ──────────────────────────────────────── */}
         <div className="bg-[#0D2B40] text-white px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-primary-container text-2xl">
+            <span className="material-symbols-outlined text-amber-400 text-2xl" aria-hidden="true">
               picture_as_pdf
             </span>
             <div>
-              <h3 className="font-headline-md text-lg font-bold">
-                {showCertificateView
-                  ? 'Official Digital 7/12 Land Certificate'
-                  : 'Select Certificate Language for PDF Generation'}
-              </h3>
-              <p className="text-xs text-white/70">
-                {showCertificateView
-                  ? `Unique Certificate ID: *MH/PUNE/HV/24/712*001 • Language: ${
-                      selectedLanguage === 'mr' ? 'Marathi' : selectedLanguage === 'en' ? 'English' : 'Hindi'
-                    }`
-                  : 'Choose target language BEFORE PDF creation to save processing & storage steps.'}
-              </p>
+              <h2 className="text-base font-bold leading-tight">
+                {step === 'pick' ? T('modalTitle') : T('modalPreviewTitle')}
+              </h2>
+              <p className="text-xs text-white/60 mt-0.5">{T('modalSubtitle')}</p>
             </div>
           </div>
           <button
+            ref={closeRef}
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-white/10 text-white/80 hover:text-white transition-colors cursor-pointer"
+            className="p-1.5 rounded-full hover:bg-white/10 text-white/70 hover:text-white transition-colors cursor-pointer"
             type="button"
+            aria-label="Close modal"
           >
-            <span className="material-symbols-outlined text-xl">close</span>
+            <span className="material-symbols-outlined text-xl" aria-hidden="true">close</span>
           </button>
         </div>
 
-        {/* Modal Body */}
-        {!showCertificateView ? (
-          <div className="p-6 space-y-6">
-            <p className="text-sm text-on-surface-variant">
-              Select any of the <strong>22 Official Constitutional Languages of India (8th Schedule)</strong> below. The local ML engine will generate the digitized land extract PDF in a single pass without extra database conversions.
+        {/* ── Insufficient data ──────────────────────────────────── */}
+        {!validation.valid && (
+          <div className="p-8 text-center space-y-4">
+            <span className="material-symbols-outlined text-5xl text-slate-300" aria-hidden="true">description</span>
+            <h3 className="text-base font-bold text-slate-800">Insufficient Record Data</h3>
+            <p className="text-sm text-slate-500 max-w-xs mx-auto">{validation.reason}</p>
+            <button
+              onClick={onClose}
+              className="mt-2 px-5 py-2 rounded-xl text-sm font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
+              type="button"
+            >
+              Close
+            </button>
+          </div>
+        )}
+
+        {/* ── Status warning banner ─────────────────────────────── */}
+        {validation.valid && (isPending || isForged) && (
+          <div className={`mx-6 mt-4 px-4 py-2.5 rounded-xl text-xs font-semibold flex items-start gap-2 border ${
+            isForged
+              ? 'bg-red-50 border-red-300 text-red-800'
+              : 'bg-amber-50 border-amber-300 text-amber-800'
+          }`}>
+            <span className="material-symbols-outlined text-base mt-0.5 shrink-0" aria-hidden="true">
+              {isForged ? 'gpp_bad' : 'warning'}
+            </span>
+            <span>
+              {isForged
+                ? 'This document is flagged as UNAUTHORIZED / FORGED. The PDF will clearly mark it as non-official.'
+                : 'This record is PENDING verification. The PDF will be watermarked as non-official.'}
+            </span>
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════════
+            STEP 1 — LANGUAGE SELECTION
+        ════════════════════════════════════════════════════════ */}
+        {validation.valid && step === 'pick' && (
+          <div className="p-6 space-y-5 overflow-y-auto flex-1">
+            <p className="text-sm text-slate-600">
+              Select any of the <strong>22 Official Constitutional Languages of India (8th Schedule)</strong>{' '}
+              below. The PDF preview and downloaded file will use your chosen language.
             </p>
 
-            {/* 22 Constitutional Languages Dropdown & Quick Selector */}
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-surface-container-low p-4 rounded-2xl border border-[#B8D8EE]">
-                <label className="text-xs font-bold text-on-surface flex items-center gap-2">
-                  <span className="text-lg">📜</span>
-                  <span>Select Target Certificate Language (२२ संविधानात्मक भाषा):</span>
-                </label>
-                <select
-                  value={selectedLanguage}
-                  onChange={(e) => setSelectedLanguage(e.target.value)}
-                  className="bg-white text-slate-900 text-sm font-bold border-2 border-primary rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer w-full sm:w-auto"
-                >
-                  {CONSTITUTION_22_LANGUAGES.map((lang) => (
-                    <option key={lang.code} value={lang.code}>
-                      {lang.icon} {lang.nameNative} — {lang.nameEn} ({lang.script} Script)
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Quick Featured Languages Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  { code: 'mr', name: 'मराठी (Marathi)', icon: '🚩' },
-                  { code: 'en', name: 'English (English)', icon: '🇬🇧' },
-                  { code: 'hi', name: 'हिन्दी (Hindi)', icon: '🇮🇳' },
-                  { code: 'gu', name: 'ગુજરાતી (Gujarati)', icon: '🏛️' },
-                  { code: 'kn', name: 'ಕನ್ನಡ (Kannada)', icon: '🏛️' },
-                  { code: 'ta', name: 'தமிழ் (Tamil)', icon: '🏛️' },
-                  { code: 'te', name: 'తెలుగు (Telugu)', icon: '🏛️' },
-                  { code: 'bn', name: 'বাংলা (Bengali)', icon: '🇧🇩' },
-                ].map((l) => (
-                  <button
-                    key={l.code}
-                    onClick={() => setSelectedLanguage(l.code)}
-                    type="button"
-                    className={`p-3 rounded-xl border text-left text-xs font-bold transition-all ${
-                      selectedLanguage === l.code
-                        ? 'border-primary bg-primary-container/30 text-primary shadow-sm ring-2 ring-primary/40'
-                        : 'border-[#B8D8EE] bg-white text-on-surface hover:border-primary/50'
-                    }`}
-                  >
-                    <span className="text-base block mb-1">{l.icon}</span>
-                    <span>{l.name}</span>
-                  </button>
+            {/* Full dropdown (all 22 languages) */}
+            <div className="bg-slate-50 border border-[#B8D8EE] rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <label
+                htmlFor="pdf-lang-select"
+                className="text-xs font-bold text-slate-700 flex items-center gap-2 shrink-0"
+              >
+                <span aria-hidden="true">📜</span>
+                Certificate Language:
+              </label>
+              <select
+                id="pdf-lang-select"
+                value={selectedLanguage}
+                onChange={(e) => setSelectedLanguage(e.target.value)}
+                className="bg-white text-slate-900 text-sm font-bold border-2 border-[#0F2C59]/40 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#0F2C59] cursor-pointer w-full sm:w-auto"
+              >
+                {CONSTITUTION_22_LANGUAGES.map((lang) => (
+                  <option key={lang.code} value={lang.code}>
+                    {lang.icon} {lang.nameNative} — {lang.nameEn} ({lang.script} Script)
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
 
-            {/* Action Bar */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-outline-variant/30">
+            {/* Quick language buttons */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {FEATURED_LANGUAGES.map((l) => (
+                <button
+                  key={l.code}
+                  onClick={() => setSelectedLanguage(l.code)}
+                  type="button"
+                  className={`p-3 rounded-xl border text-left text-xs font-bold transition-all ${
+                    selectedLanguage === l.code
+                      ? 'border-[#0F2C59] bg-[#0F2C59]/10 text-[#0F2C59] shadow-sm ring-2 ring-[#0F2C59]/30'
+                      : 'border-[#B8D8EE] bg-white text-slate-700 hover:border-[#0F2C59]/40'
+                  }`}
+                  aria-pressed={selectedLanguage === l.code}
+                >
+                  <span className="text-base block mb-1" aria-hidden="true">{l.icon}</span>
+                  <span>{l.name}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Preview of selected language label */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 text-xs text-blue-800 flex items-center gap-2">
+              <span className="material-symbols-outlined text-sm" aria-hidden="true">translate</span>
+              <span>
+                Selected: <strong>{
+                  CONSTITUTION_22_LANGUAGES.find(l => l.code === selectedLanguage)?.nameNative
+                } ({
+                  CONSTITUTION_22_LANGUAGES.find(l => l.code === selectedLanguage)?.nameEn
+                })</strong> — document title will read: <em>{T('docTitle')}</em>
+              </span>
+            </div>
+
+            {/* Action bar */}
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
               <button
                 onClick={onClose}
-                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
                 type="button"
               >
                 Cancel
               </button>
               <button
-                onClick={handleGenerate}
-                disabled={isGenerating}
-                className="px-6 py-2.5 rounded-xl text-xs font-bold bg-primary text-on-primary hover:bg-[#2DA090] transition-all flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
+                onClick={handleGoToPreview}
+                className="px-6 py-2.5 rounded-xl text-xs font-bold bg-[#0F2C59] text-white hover:bg-[#163A72] transition-all flex items-center gap-2 shadow-md cursor-pointer"
                 type="button"
               >
-                {isGenerating ? (
-                  <>
-                    <span className="material-symbols-outlined text-sm animate-spin">
-                      autorenew
-                    </span>
-                    <span>Generating Single-Pass PDF...</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
-                    <span>Generate &amp; Preview PDF</span>
-                  </>
-                )}
+                <span className="material-symbols-outlined text-sm" aria-hidden="true">visibility</span>
+                Preview Document
               </button>
             </div>
           </div>
-        ) : (
-          /* Certificate Preview Mode */
-          <div className="p-6 space-y-6">
-            {/* Top Toolbar */}
-            <div className="flex items-center justify-between bg-primary-container/20 p-3 rounded-2xl border border-primary/30">
-              <div className="flex items-center gap-2 text-xs font-semibold text-primary">
-                <span className="material-symbols-outlined text-sm">verified</span>
-                <span>Single-Pass PDF Generated Successfully</span>
-              </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════════
+            STEP 2 — DOCUMENT PREVIEW + DOWNLOAD
+        ════════════════════════════════════════════════════════ */}
+        {validation.valid && step === 'preview' && pd && (
+          <div className="p-6 space-y-4 overflow-y-auto flex-1">
+
+            {/* ── Toolbar ──────────────────────────────────────── */}
+            <div className="flex items-center justify-between bg-slate-50 border border-[#D0E8F5] p-3 rounded-2xl flex-wrap gap-3">
+              <button
+                onClick={handleBackToPick}
+                className="flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                type="button"
+                aria-label="Back to language selection"
+              >
+                <span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_back</span>
+                Change Language
+              </button>
+
+              {/* Current language indicator */}
+              <span className="text-[10px] font-bold text-[#0F2C59] bg-[#0F2C59]/10 px-3 py-1 rounded-full">
+                {CONSTITUTION_22_LANGUAGES.find(l => l.code === selectedLanguage)?.nameNative || selectedLanguage.toUpperCase()}
+              </span>
+
               <div className="flex items-center gap-2">
                 <button
-                  onClick={handlePrint}
-                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-[#B8D8EE] text-on-surface hover:bg-surface-container transition-colors flex items-center gap-1 cursor-pointer"
+                  onClick={() => window.print()}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-[#B8D8EE] text-slate-700 hover:bg-slate-100 transition-colors flex items-center gap-1 cursor-pointer"
                   type="button"
+                  aria-label="Print document"
                 >
-                  <span className="material-symbols-outlined text-sm">print</span>
+                  <span className="material-symbols-outlined text-sm" aria-hidden="true">print</span>
                   Print
                 </button>
+
                 <button
-                  onClick={handleDownloadPdf}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-primary text-on-primary hover:bg-[#2DA090] transition-colors flex items-center gap-1 cursor-pointer shadow-sm"
+                  onClick={dlState === 'error' ? handleRetry : handleDownload}
+                  disabled={downloadDisabled && dlState !== 'error'}
+                  className={`px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm cursor-pointer ${
+                    downloadDisabled && dlState !== 'error'
+                      ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                      : dlState === 'done'
+                      ? 'bg-emerald-600 text-white'
+                      : dlState === 'error'
+                      ? 'bg-red-600 text-white hover:bg-red-700'
+                      : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                  }`}
                   type="button"
+                  aria-busy={dlState === 'generating'}
                 >
-                  <span className="material-symbols-outlined text-sm">download</span>
-                  Download PDF
+                  {dlState === 'generating' ? (
+                    <>
+                      <span className="material-symbols-outlined text-sm animate-spin" aria-hidden="true">autorenew</span>
+                      <span>Generating PDF…</span>
+                    </>
+                  ) : dlState === 'done' ? (
+                    <>
+                      <span className="material-symbols-outlined text-sm" aria-hidden="true">check_circle</span>
+                      <span>Downloaded!</span>
+                    </>
+                  ) : dlState === 'error' ? (
+                    <>
+                      <span className="material-symbols-outlined text-sm" aria-hidden="true">refresh</span>
+                      <span>Retry Download</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-sm" aria-hidden="true">download</span>
+                      <span>Download PDF</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
 
-            {/* Official Certificate Paper Card */}
-            <div className="bg-white border-2 border-gray-300 rounded-2xl p-6 shadow-sm text-gray-800 space-y-6 relative print:border-none print:shadow-none">
-              {/* Certificate Header */}
-              <div className="text-center border-b-2 border-gray-400 pb-4 relative">
-                <div className="absolute top-0 right-0">
-                  {/* QR Code Simulation */}
-                  <div className="w-16 h-16 bg-gray-900 rounded p-1 flex flex-col justify-between items-center text-[8px] text-white font-mono">
-                    <div className="w-full flex justify-between"><span>■</span><span>■</span></div>
-                    <span className="text-[7px]">QR VERIFIED</span>
-                    <div className="w-full flex justify-between"><span>■</span><span>■</span></div>
+            {/* Feedback banners */}
+            {dlState === 'done' && (
+              <div
+                role="status"
+                aria-live="polite"
+                className="flex items-center gap-2 bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-semibold px-4 py-2.5 rounded-xl"
+              >
+                <span className="material-symbols-outlined text-base" aria-hidden="true">check_circle</span>
+                Land record PDF downloaded successfully.
+              </div>
+            )}
+            {dlState === 'error' && dlError && (
+              <div
+                role="alert"
+                aria-live="assertive"
+                className="flex items-center gap-2 bg-red-50 border border-red-300 text-red-800 text-xs font-semibold px-4 py-2.5 rounded-xl"
+              >
+                <span className="material-symbols-outlined text-base" aria-hidden="true">error</span>
+                {dlError}
+              </div>
+            )}
+
+            {/* ── Document Preview Card ───────────────────────── */}
+            {/* NOTE: Every label below uses T(key) so it updates immediately
+                when selectedLanguage changes — no stale English labels. */}
+            <div
+              ref={previewCardRef}
+              id="bhunetra-pdf-preview"
+              className={`bg-white border-2 rounded-2xl shadow-sm overflow-hidden ${
+                pd.isForged   ? 'border-red-400'
+                : pd.isVerified ? 'border-[#0F2C59]/30'
+                :                 'border-amber-400'
+              }`}
+              aria-label="Document preview"
+            >
+              {/* Header */}
+              <div className="bg-[#0F2C59] text-white px-5 py-4 text-center">
+                <div className="text-xs font-bold tracking-widest text-amber-400 mb-1">BHUNETRA</div>
+                <div className="text-[10px] text-white/60 mb-2 uppercase tracking-wider">
+                  {T('previewSystem')}
+                </div>
+                <div className="text-sm font-extrabold tracking-tight">{T('previewHeader')}</div>
+                <div className="text-[10px] text-white/50 mt-1">{T('previewSubtitle')}</div>
+              </div>
+
+              {/* Status strip */}
+              <div className={`text-center py-1.5 text-[10px] font-extrabold tracking-widest uppercase ${
+                pd.isForged    ? 'bg-red-600 text-white'
+                : pd.isVerified  ? 'bg-emerald-600 text-white'
+                :                  'bg-amber-500 text-slate-950'
+              }`}>
+                {pd.isForged
+                  ? `🚨 ${T('statusForged')}`
+                  : pd.isVerified
+                  ? `✔ ${T('statusVerified')}`
+                  : `⚠ ${T('statusPending')}`}
+              </div>
+
+              {/* Meta row */}
+              <div className="flex justify-between items-center px-5 py-2 bg-slate-50 border-b border-slate-200 text-[10px] text-slate-500 font-mono">
+                <span>{T('previewRecordId')} <strong className="text-slate-800">{pd.recordId}</strong></span>
+                <span>{T('previewGenerated')} <strong className="text-slate-800">{pd.generatedAt}</strong></span>
+              </div>
+
+              {/* Content */}
+              <div className="p-5 space-y-1 text-sm">
+
+                {/* Section 1 — Land Identification */}
+                <PreviewSection title={T('sec1')}>
+                  <PreviewField label={T('fldSurveyNo')}    value={pd.khasraNumber} />
+                  <PreviewField label={T('fldHissaNo')}     value={pd.hissaNumber} />
+                  <PreviewField label={T('fldKhataNo')}     value={pd.khataNumber} />
+                  <PreviewField label={T('fldPlotNo')}      value={pd.plotNumber} />
+                  <PreviewField label={T('fldVillageCode')} value={pd.villageCode} />
+                  <PreviewField label={T('fldVillage')}     value={pd.village} />
+                  <PreviewField label={T('fldTehsil')}      value={pd.tehsil} />
+                  <PreviewField label={T('fldDistrict')}    value={pd.district} />
+                </PreviewSection>
+
+                {/* Section 2 — Land Details */}
+                <PreviewSection title={T('sec2')}>
+                  <PreviewField label={T('fldArea')}            value={pd.landArea} />
+                  <PreviewField label={T('fldAssessment')}      value={pd.assessment} />
+                  <PreviewField label={T('fldLandClass')}       value={pd.landClassification} />
+                  <PreviewField label={T('fldLandType')}        value={pd.landType} />
+                  <PreviewField label={T('fldOwnershipType')}   value={pd.ownershipType} />
+                </PreviewSection>
+
+                {/* Section 3 — Ownership */}
+                <PreviewSection title={T('sec3')}>
+                  <PreviewField
+                    label={T('fldOwnerName')}
+                    value={pd.ownerName}
+                    highlight={pd.isForged}
+                  />
+                  <PreviewField label={T('fldEncumbrance')} value={pd.encumbrance} />
+                </PreviewSection>
+
+                {/* Section 4 — Mutation (conditional) */}
+                {(pd.mutationNumber !== DASH || pd.mutationDate !== DASH || pd.registrationInfo !== DASH) && (
+                  <PreviewSection title={T('sec4')}>
+                    <PreviewField label={T('fldMutationNo')}       value={pd.mutationNumber} />
+                    <PreviewField label={T('fldMutationDate')}     value={pd.mutationDate} />
+                    <PreviewField label={T('fldRegistrationInfo')} value={pd.registrationInfo} />
+                  </PreviewSection>
+                )}
+
+                {/* Section 5 — Validation Summary */}
+                <PreviewSection title={T('sec5')}>
+                  <PreviewField label={T('fldConfidence')}   value={pd.confidence} />
+                  <PreviewField label={T('fldVerifStatus')}  value={pd.statusLabel} />
+                  <PreviewField label={T('fldSystem')}       value={T('fldSystem2')} />
+                </PreviewSection>
+
+                {/* Signature row */}
+                <div className="flex justify-between items-end pt-3 mt-3 border-t border-gray-200">
+                  <div className="text-[10px] text-gray-500 font-mono">
+                    <div>{T('previewSysRef')} 712MV-{pd.recordId}-BHUNETRA</div>
+                    <div className="mt-0.5 text-[9px]">{T('previewNote')}</div>
+                  </div>
+                  <div className="border border-gray-300 rounded-lg p-2 text-right bg-gray-50 min-w-[140px]">
+                    <div className="text-[10px] font-bold text-gray-800">{T('previewSigTitle')}</div>
+                    <div className="text-[9px] text-gray-600">{T('previewSigRole')}</div>
+                    <div className={`text-[9px] font-bold mt-0.5 ${pd.isVerified ? 'text-emerald-700' : 'text-amber-700'}`}>
+                      {pd.isVerified ? T('previewSigVerified') : T('previewSigPending')}
+                    </div>
                   </div>
                 </div>
-                <h2 className="text-lg font-bold text-gray-900">
-                  {selectedLanguage === 'en'
-                    ? 'GOVERNMENT OF MAHARASHTRA'
-                    : selectedLanguage === 'hi'
-                    ? 'महाराष्ट्र सरकार'
-                    : 'महाराष्ट्र शासन'}
-                </h2>
-                <h3 className="text-xl font-extrabold mt-1 text-gray-900">
-                  {selectedLanguage === 'en'
-                    ? 'DIGITAL 7/12 EXTRACT CERTIFICATE'
-                    : selectedLanguage === 'hi'
-                    ? 'डिजिटल सातबारा (७/१२) राजस्व प्रमाण पत्र'
-                    : 'डिजिटल सातबारा (७/१२) उतारा'}
-                </h3>
-                <p className="text-xs text-gray-500 font-mono mt-1">
-                  (गावाचे नाव: {selectedLanguage === 'en' ? record.villageEn || record.village : record.village} • तालुका: {selectedLanguage === 'en' ? record.tehsilEn || record.tehsil : record.tehsil} • जिल्हा: {selectedLanguage === 'en' ? record.districtEn || record.district : record.district})
-                </p>
-              </div>
-
-              {/* Data Table */}
-              <table className="w-full text-left text-xs border-collapse border border-gray-300">
-                <thead>
-                  <tr className="bg-gray-100 font-bold border-b border-gray-300 text-gray-700">
-                    <th className="p-2 border-r border-gray-300">
-                      {selectedLanguage === 'en' ? 'Gat / Survey No.' : 'गट / सर्व्हे क्र.'}
-                    </th>
-                    <th className="p-2 border-r border-gray-300">
-                      {selectedLanguage === 'en' ? 'Khata No.' : 'खाते क्र.'}
-                    </th>
-                    <th className="p-2 border-r border-gray-300">
-                      {selectedLanguage === 'en' ? 'Land Owner Name' : 'खातेदाराचे नाव'}
-                    </th>
-                    <th className="p-2 border-r border-gray-300">
-                      {selectedLanguage === 'en' ? 'Total Area' : 'एकूण क्षेत्र (हेक्टर)'}
-                    </th>
-                    <th className="p-2">
-                      {selectedLanguage === 'en' ? 'Encumbrance' : 'बोझा तपशील'}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b border-gray-300">
-                    <td className="p-2 border-r border-gray-300 font-bold">{record.khasraNumber || record.khasra_no}</td>
-                    <td className="p-2 border-r border-gray-300 font-bold">{record.khataNumber || record.khata_no}</td>
-                    <td className="p-2 border-r border-gray-300 font-semibold">
-                      {selectedLanguage === 'en' ? record.ownerNameEn || record.ownerName : record.ownerName}
-                    </td>
-                    <td className="p-2 border-r border-gray-300">
-                      {selectedLanguage === 'en' ? record.landAreaEn || record.landArea : record.landArea}
-                    </td>
-                    <td className={`p-2 font-medium ${record.isForged ? 'text-red-700 font-bold' : 'text-emerald-700'}`}>
-                      {selectedLanguage === 'en' ? record.encumbranceEn || record.encumbrance : record.encumbrance}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-
-              {/* Official Revenue Digital Signature Box */}
-              <div className="flex justify-between items-end pt-4 border-t border-gray-200 text-xs">
-                <div>
-                  <p className="text-gray-500 font-mono text-[10px]">
-                    System Verification Hash: 712MV-XG9-2026-BHUNETRA
-                  </p>
-                  <p className="text-gray-500 text-[10px] mt-0.5">
-                    Digitally generated by BHUNETRA Sub-5ms Local ML Engine
-                  </p>
-                </div>
-                <div className="border border-gray-300 p-2.5 rounded-lg text-right bg-gray-50 max-w-[220px]">
-                  <p className="font-bold text-gray-900">डिजिटल सही (Digital Signature)</p>
-                  <p className="text-[11px] text-gray-700 mt-0.5">तहसीलदार / तलाठी</p>
-                  <p className="text-[10px] text-gray-500 font-mono mt-1">महसूल विभाग, पुणे</p>
-                  <p className="text-[9px] text-emerald-600 font-bold mt-0.5">✔ Digitally Signed</p>
-                </div>
               </div>
             </div>
 
-            {/* Back Button */}
-            <div className="flex justify-start">
-              <button
-                onClick={() => setShowCertificateView(false)}
-                className="px-4 py-2 text-xs font-semibold text-secondary hover:underline flex items-center gap-1 cursor-pointer"
-                type="button"
-              >
-                <span className="material-symbols-outlined text-sm">arrow_back</span>
-                Change Language Selection
-              </button>
-            </div>
+            {isPending && !isForged && (
+              <p className="text-[10px] text-amber-700 text-center font-medium">
+                {T('statusPending')}
+              </p>
+            )}
           </div>
         )}
       </div>
     </div>
   )
 }
+
+export default DigitizedPdfModal
