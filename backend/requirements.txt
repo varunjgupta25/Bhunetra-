@@ -15,3 +15,5 @@ pytest-asyncio
 easyocr
 pdf2image
 numpy
+reportlab
+qrcode[pil]

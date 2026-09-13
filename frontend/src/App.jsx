@@ -10,6 +10,7 @@ import UploadPage from '@/pages/Upload'
 import VerificationPage from '@/pages/Verification'
 import RecordsPage from '@/pages/Records'
 import LoginPage from '@/pages/Login'
+import VerifyStatusPage from '@/pages/VerifyStatus'
 
 function ProtectedRoute({ children, allowedRoles }) {
   const { user, isAuthenticated } = useAppStore()
@@ -58,6 +59,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<HomeRedirect />} />
             <Route path="/explore" element={<LandingPage />} />
+            <Route path="/verify/:recordId" element={<VerifyStatusPage />} />
             <Route path="/citizen" element={<CitizenPortalPage />} />
             <Route
               path="/dashboard"

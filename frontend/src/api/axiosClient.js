@@ -214,6 +214,13 @@ export const recordsApi = {
   getDuplicates: async () => {
     return await axiosClient.get('/api/records/duplicates')
   },
+
+  /**
+   * Public endpoint to fetch verification status
+   */
+  verifyStatus: async (recordId) => {
+    return await axiosClient.get(`/api/records/${recordId}/verify-status`)
+  },
 }
 
 export const dashboardApi = {

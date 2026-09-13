@@ -21,6 +21,7 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import html2canvas from 'html2canvas'
+import QRCode from 'qrcode'
 import { formatConfidence } from '@/lib/utils'
 import { t } from '@/utils/pdfTranslations'
 import { getLocalizedRecord } from '@/utils/recordLocalization'
@@ -278,6 +279,20 @@ export async function generateLandRecordPdf(record = {}, { language = 'en', prev
   doc.setFontSize(7)
   doc.setTextColor(200, 210, 230)
   doc.text(T('docSubtitle'), PAGE_W / 2, 37, { align: 'center' })
+
+  // Verification QR Code in Top-Right
+  try {
+    const host = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+      ? (import.meta.env?.VITE_LAN_IP || '10.24.165.216')
+      : (typeof window !== 'undefined' ? window.location.hostname : '10.24.165.216')
+    const port = (typeof window !== 'undefined' && window.location.port) ? `:${window.location.port}` : ':5173'
+    const protocol = (typeof window !== 'undefined' && window.location.protocol) ? window.location.protocol : 'http:'
+    const verifyUrl = `${protocol}//${host}${port}/verify/${data.recordId}`
+    const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: 140, margin: 1 })
+    doc.addImage(qrDataUrl, 'PNG', PAGE_W - MARGIN - 26, 6, 26, 26)
+  } catch (qrErr) {
+    console.warn('[pdfGenerator] QR code rendering in fallback failed:', qrErr)
+  }
 
   curY = 50
 

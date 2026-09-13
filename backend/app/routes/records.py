@@ -10,7 +10,8 @@ import uuid
 import logging
 from datetime import datetime, timezone
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
+from fastapi.responses import Response
 
 from app.firebase_config import get_db, generate_signed_url
 from app.utils.auth import get_current_user, AuthenticatedUser, require_role
@@ -19,9 +20,57 @@ from app.schemas.record import LandRecord, LandRecordListResponse, DuplicateDete
 from app.schemas.verification import VerificationPatchRequest, VerificationQueueItem, VerificationQueueResponse
 from app.services.validation_rules import validator
 from app.services.synthetic_land_db import synthetic_land_db, synthetic_record_to_land_record
+from app.services.qr_certificate_generator import generate_record_pdf
 
 logger = logging.getLogger("bhunetra.routes.records")
 router = APIRouter(prefix="/api/records", tags=["Records"])
+
+# ── Demo Papers Catalog for Presentation & Verification ──────────
+DEMO_PAPERS_MAP: Dict[str, Any] = {}
+try:
+    from app.data.generate_all_10_land_doc_types import DOC_TYPES_DATA
+    for dt in DOC_TYPES_DATA:
+        cat_key = dt.get("categoryKey", "VILLAGE_FORM_7_12")
+        for p in dt.get("papers", []):
+            DEMO_PAPERS_MAP[p["id"]] = {**p, "documentCategory": cat_key}
+except Exception as e:
+    logger.warning(f"Failed to load demo papers catalog: {e}")
+
+
+def demo_paper_to_land_record(paper: Dict[str, Any]) -> LandRecord:
+    is_forged = paper.get("isForged", False)
+    confidence = float(paper.get("confidence", 0.95))
+    ver_status = (
+        VerificationStatus.PENDING_REVIEW if is_forged else (
+            VerificationStatus.VERIFIED if confidence >= 0.85 else VerificationStatus.PENDING_REVIEW
+        )
+    )
+    now_iso = "2026-09-13T12:00:00Z"
+
+    return LandRecord(
+        recordId=paper["id"],
+        docId=f"DOC-{paper['id']}",
+        documentCategory=paper.get("documentCategory", "VILLAGE_FORM_7_12"),
+        categoryLabel=paper.get("title", "Land Record"),
+        khasraNumber=str(paper.get("khasraNumber", "")),
+        khataNumber=str(paper.get("khataNumber", "")),
+        ownerName=str(paper.get("ownerName", "")),
+        village=str(paper.get("village", "")),
+        tehsil=str(paper.get("tehsil", "")),
+        district=str(paper.get("district", "")),
+        landArea=str(paper.get("area", "")),
+        ownershipType=str(paper.get("ownershipType", "भोगवटादार वर्ग - १ (Class-1)")),
+        extraDetails=paper.get("extraDetails", {}),
+        confidenceScores={"ownerName": confidence, "khasraNumber": confidence, "village": confidence},
+        overallConfidence=confidence,
+        verificationStatus=ver_status,
+        isForged=is_forged,
+        documentUrl=f"/demo_papers/{paper.get('key', '')}.svg",
+        createdAt=now_iso,
+        updatedAt=now_iso,
+        verifiedAt=now_iso if not is_forged else None
+    )
+
 
 
 @router.get("", response_model=LandRecordListResponse, summary="List Land Records with Filters")
@@ -224,6 +273,10 @@ async def get_record(
                 data["documentUrl"] = doc_snap.to_dict().get("storageUrl")
         return LandRecord(**data)
 
+    # Fallback to Demo Papers Catalog
+    if recordId in DEMO_PAPERS_MAP:
+        return demo_paper_to_land_record(DEMO_PAPERS_MAP[recordId])
+
     # Fallback to Synthetic Land Database
     syn_record = synthetic_land_db.get_record_by_id(recordId)
     if syn_record:
@@ -302,21 +355,19 @@ async def verify_record(
     return LandRecord(**final_snap.to_dict())
 
 
-@router.get("/{recordId}/export-pdf", summary="Export Digitized Land Record Certificate PDF in Selected Language")
-async def export_record_pdf(
-    recordId: str,
-    lang: str = Query("mr", description="Target PDF certificate language code (22 Constitutional Languages supported: mr, hi, en, bn, ta, te, kn, ml, gu, pa, or, as, ur, sa, ks, sd, ne, kok, doi, mni, sat, brx, mai)"),
-    user: AuthenticatedUser = Depends(get_current_user)
-):
+@router.get("/{recordId}/verify-status", summary="Public Verification Status")
+async def get_verify_status(recordId: str):
     """
-    Generates and streams an official vectorized A4 Land Extract Certificate PDF
-    directly in the user's chosen language out of India's 22 Official Constitutional Languages.
+    Public endpoint to verify the status of a land record via QR code scan.
     """
     db = get_db()
     snap = db.collection("records").document(recordId).get()
     
     if snap.exists:
         data = snap.to_dict()
+    elif recordId in DEMO_PAPERS_MAP:
+        lr = demo_paper_to_land_record(DEMO_PAPERS_MAP[recordId])
+        data = lr.model_dump()
     else:
         syn_record = synthetic_land_db.get_record_by_id(recordId)
         if syn_record:
@@ -324,53 +375,133 @@ async def export_record_pdf(
             data = lr.model_dump()
         else:
             raise HTTPException(status_code=404, detail=f"Record '{recordId}' not found.")
-    valid_codes = ["mr", "hi", "en", "bn", "ta", "te", "kn", "ml", "gu", "pa", "or", "as", "ur", "sa", "ks", "sd", "ne", "kok", "doi", "mni", "sat", "brx", "mai"]
-    lang_code = lang.lower() if lang.lower() in valid_codes else "mr"
+            
+    return {
+        "recordId": data.get("recordId", recordId),
+        "verificationStatus": data.get("verificationStatus", "pending"),
+        "ownerName": data.get("ownerName", ""),
+        "khasraNumber": data.get("khasraNumber", ""),
+        "khataNumber": data.get("khataNumber", ""),
+        "village": data.get("village", ""),
+        "tehsil": data.get("tehsil", ""),
+        "district": data.get("district", ""),
+        "landArea": data.get("landArea", ""),
+        "ownershipType": data.get("ownershipType", ""),
+        "categoryLabel": data.get("categoryLabel", "Land Record Extract"),
+        "overallConfidence": data.get("overallConfidence", 0.95),
+        "lastVerifiedAt": data.get("verifiedAt", data.get("updatedAt", "")),
+        "pdfUrl": f"/api/records/{recordId}/public-pdf"
+    }
 
-    # Minimal dynamic PDF text payload
-    from fastapi.responses import Response
+
+@router.get("/{recordId}/public-pdf", summary="Public Download of Verified Land Record Certificate PDF")
+async def public_download_pdf(
+    recordId: str,
+    request: Request
+):
+    """
+    Public zero-auth endpoint allowing citizens to download official certified PDF
+    with embedded QR code and Devanagari support.
+    """
+    db = get_db()
+    snap = db.collection("records").document(recordId).get()
     
-    cert_title = "DIGITAL 7/12 LAND EXTRACT CERTIFICATE" if lang_code == "en" else (
-        "डिजिटल सातबारा (७/१२) राजस्व प्रमाण पत्र" if lang_code == "hi" else "डिजिटल सातबारा (७/१२) उतारा"
-    )
+    if snap.exists:
+        data = snap.to_dict()
+    elif recordId in DEMO_PAPERS_MAP:
+        lr = demo_paper_to_land_record(DEMO_PAPERS_MAP[recordId])
+        data = lr.model_dump()
+    else:
+        syn_record = synthetic_land_db.get_record_by_id(recordId)
+        if syn_record:
+            lr = synthetic_record_to_land_record(syn_record)
+            data = lr.model_dump()
+        else:
+            raise HTTPException(status_code=404, detail=f"Record '{recordId}' not found.")
 
-    pdf_content = f"""%PDF-1.4
-1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
-2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
-3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >> endobj
-4 0 obj << /Length 200 >> stream
-BT
-/F1 14 Tf
-50 750 Td
-({cert_title}) Tj
-/F1 10 Tf
-50 720 Td
-(Record ID: {recordId} | Survey No: {data.get('khasraNumber')} | Khata: {data.get('khataNumber')}) Tj
-50 700 Td
-(Owner: {data.get('ownerName')} | Area: {data.get('landArea')}) Tj
-50 680 Td
-(Village: {data.get('village')} | District: {data.get('district')}) Tj
-50 650 Td
-(Digitally Authenticated by BHUNETRA Sub-5ms Local ML Engine) Tj
-ET
-endstream endobj
-xref
-0 5
-0000000000 65535 f
-0000000009 00000 n
-0000000058 00000 n
-0000000115 00000 n
-0000000214 00000 n
-trailer << /Size 5 /Root 1 0 R >>
-startxref
-465
-%%EOF"""
-
-    filename = f"712_Extract_{recordId}_{lang_code}.pdf"
-    logger.info(f"📄 Generated {lang_code.upper()} Land Extract PDF Certificate for {recordId}")
+    pdf_data = {
+        "owner_name": data.get("ownerName", ""),
+        "property_id": data.get("khasraNumber", ""),
+        "area": data.get("landArea", ""),
+        "village": data.get("village", ""),
+        "district": data.get("district", ""),
+        "state": data.get("state", "Maharashtra"),
+    }
+    
+    origin = request.headers.get("origin")
+    if origin and "5173" in origin:
+        verification_url = f"{origin.rstrip('/')}/verify/{recordId}"
+    elif "8000" in str(request.base_url):
+        verification_url = f"{request.url.scheme}://{request.url.hostname}:5173/verify/{recordId}"
+    else:
+        base_url = str(request.base_url).rstrip("/")
+        verification_url = f"{base_url}/api/records/{recordId}/verify-status"
+    
+    pdf_bytes = generate_record_pdf(recordId, pdf_data, verification_url)
+    filename = f"Bhunetra_Certified_Record_{recordId}.pdf"
+    logger.info(f"📄 Generated Public QR PDF Certificate for {recordId}")
 
     return Response(
-        content=pdf_content.encode('utf-8'),
+        content=pdf_bytes,
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+
+
+@router.get("/{recordId}/export-pdf", summary="Export Digitized Land Record Certificate PDF")
+async def export_record_pdf(
+    recordId: str,
+    request: Request,
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """
+    Generates and streams an official vectorized A4 Land Extract Certificate PDF
+    with embedded QR code and Devanagari support.
+    """
+    db = get_db()
+    snap = db.collection("records").document(recordId).get()
+    
+    if snap.exists:
+        data = snap.to_dict()
+    elif recordId in DEMO_PAPERS_MAP:
+        lr = demo_paper_to_land_record(DEMO_PAPERS_MAP[recordId])
+        data = lr.model_dump()
+    else:
+        syn_record = synthetic_land_db.get_record_by_id(recordId)
+        if syn_record:
+            lr = synthetic_record_to_land_record(syn_record)
+            data = lr.model_dump()
+        else:
+            raise HTTPException(status_code=404, detail=f"Record '{recordId}' not found.")
+
+    pdf_data = {
+        "owner_name": data.get("ownerName", ""),
+        "property_id": data.get("khasraNumber", ""),
+        "area": data.get("landArea", ""),
+        "village": data.get("village", ""),
+        "district": data.get("district", ""),
+        "state": data.get("state", "Maharashtra"),
+    }
+    
+    # Resolve verification URL pointing to public frontend verification page
+    origin = request.headers.get("origin")
+    if origin and "5173" in origin:
+        verification_url = f"{origin.rstrip('/')}/verify/{recordId}"
+    elif "8000" in str(request.base_url):
+        verification_url = f"{request.url.scheme}://{request.url.hostname}:5173/verify/{recordId}"
+    else:
+        base_url = str(request.base_url).rstrip("/")
+        verification_url = f"{base_url}/api/records/{recordId}/verify-status"
+    
+    pdf_bytes = generate_record_pdf(recordId, pdf_data, verification_url)
+    
+    filename = f"712_Extract_{recordId}.pdf"
+    logger.info(f"📄 Generated QR PDF Certificate for {recordId}")
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useAppStore } from '@/store/useAppStore'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -19,6 +20,39 @@ import {
 export default function RecordsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [districtFilter, setDistrictFilter] = useState('All')
+  const [isDownloading, setIsDownloading] = useState(null)
+  
+  const token = useAppStore((state) => state.token)
+
+  const handleDownload = async (recordId) => {
+    try {
+      setIsDownloading(recordId)
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
+      const url = `${baseUrl}/api/records/${recordId}/export-pdf`
+      
+      const response = await fetch(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to download PDF')
+      }
+      
+      const blob = await response.blob()
+      const downloadUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      link.download = `712_Extract_${recordId}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(downloadUrl)
+    } catch (error) {
+      console.error('Download error:', error)
+    } finally {
+      setIsDownloading(null)
+    }
+  }
 
   const mockRecords = [
     {
@@ -146,6 +180,7 @@ export default function RecordsPage() {
                 <th className="px-4 py-3.5">Area</th>
                 <th className="px-4 py-3.5">Confidence</th>
                 <th className="px-4 py-3.5">Status</th>
+                <th className="px-4 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
@@ -164,6 +199,18 @@ export default function RecordsPage() {
                     <Badge variant={r.status === 'auto-approved' ? 'emerald' : 'amber'} className="text-[10px]">
                       {r.status === 'auto-approved' ? 'Auto-Approved' : 'Pending Review'}
                     </Badge>
+                  </td>
+                  <td className="px-4 py-3.5 text-right">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-8 text-xs gap-1.5 border-slate-700 bg-slate-800 hover:bg-slate-700"
+                      onClick={() => handleDownload(r.recordId)}
+                      disabled={isDownloading === r.recordId}
+                    >
+                      <FileCheck2 className="h-3.5 w-3.5 text-emerald-400" />
+                      {isDownloading === r.recordId ? 'Downloading...' : 'Certificate'}
+                    </Button>
                   </td>
                 </tr>
               ))}

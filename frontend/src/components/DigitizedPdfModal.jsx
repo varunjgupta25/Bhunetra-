@@ -20,6 +20,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
+import QRCode from 'qrcode'
 import { useAppStore } from '@/store/useAppStore'
 import { CONSTITUTION_22_LANGUAGES } from '@/utils/languages'
 import {
@@ -79,6 +80,7 @@ export function DigitizedPdfModal({ isOpen, onClose, recordData, onConfirmExport
   const [step, setStep] = useState('pick')           // 'pick' | 'preview'
   const [dlState, setDlState] = useState('idle')     // 'idle' | 'generating' | 'done' | 'error'
   const [dlError, setDlError]  = useState(null)
+  const [qrDataUrl, setQrDataUrl] = useState('')
 
   const modalRef = useRef(null)
   const closeRef = useRef(null)
@@ -94,6 +96,30 @@ export function DigitizedPdfModal({ isOpen, onClose, recordData, onConfirmExport
       setTimeout(() => closeRef.current?.focus(), 50)
     }
   }, [isOpen, globalLanguage])
+
+  // ── Generate QR code for verification ────────────────────────────
+  useEffect(() => {
+    if (!isOpen || !recordData) return
+    const recId = recordData.recordId || recordData.id || ''
+    if (!recId) return
+
+    const host = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+      ? (import.meta.env.VITE_LAN_IP || '10.24.165.216')
+      : window.location.hostname
+    const port = (typeof window !== 'undefined' && window.location.port) ? `:${window.location.port}` : ''
+    const verifyUrl = `${window.location.protocol}//${host}${port}/verify/${recId}`
+
+    QRCode.toDataURL(verifyUrl, {
+      width: 180,
+      margin: 1,
+      color: {
+        dark: '#0F2C59',
+        light: '#ffffff',
+      },
+    })
+      .then((url) => setQrDataUrl(url))
+      .catch((err) => console.error('Failed to generate verification QR:', err))
+  }, [isOpen, recordData])
 
   // ── ESC closes ───────────────────────────────────────────────────
   useEffect(() => {
@@ -426,13 +452,42 @@ export function DigitizedPdfModal({ isOpen, onClose, recordData, onConfirmExport
               aria-label="Document preview"
             >
               {/* Header */}
-              <div className="bg-[#0F2C59] text-white px-5 py-4 text-center">
-                <div className="text-xs font-bold tracking-widest text-amber-400 mb-1">BHUNETRA</div>
-                <div className="text-[10px] text-white/60 mb-2 uppercase tracking-wider">
-                  {T('previewSystem')}
+              <div className="bg-[#0F2C59] text-white px-4 sm:px-6 py-4 relative flex items-center justify-between">
+                {/* Government Emblem / Emblem Placeholder to balance layout */}
+                <div className="hidden sm:flex flex-col items-center justify-center w-20 text-center">
+                  <div className="text-[9px] text-amber-400/90 font-bold uppercase tracking-wider border border-amber-400/30 rounded px-2 py-1.5 bg-white/5">
+                    Govt. of Maharashtra
+                  </div>
+                  <span className="text-[8px] text-white/50 mt-1 font-mono tracking-tighter">DILRMP-2.0</span>
                 </div>
-                <div className="text-sm font-extrabold tracking-tight">{T('previewHeader')}</div>
-                <div className="text-[10px] text-white/50 mt-1">{T('previewSubtitle')}</div>
+
+                {/* Center Title Content */}
+                <div className="flex-1 text-center px-2">
+                  <div className="text-xs font-bold tracking-widest text-amber-400 mb-0.5">BHUNETRA</div>
+                  <div className="text-[10px] text-white/60 mb-1 uppercase tracking-wider">
+                    {T('previewSystem')}
+                  </div>
+                  <div className="text-sm sm:text-base font-extrabold tracking-tight leading-tight">{T('previewHeader')}</div>
+                  <div className="text-[10px] text-white/50 mt-0.5">{T('previewSubtitle')}</div>
+                </div>
+
+                {/* Verification QR Code in Top-Right Corner */}
+                <div className="shrink-0 bg-white p-1.5 rounded-lg shadow-md border border-amber-400/50 flex flex-col items-center">
+                  {qrDataUrl ? (
+                    <img
+                      src={qrDataUrl}
+                      alt="Verification QR Code"
+                      className="w-14 h-14 sm:w-16 sm:h-16 object-contain rounded"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 bg-slate-100 flex items-center justify-center text-[8px] text-slate-500 font-mono">
+                      QR Code
+                    </div>
+                  )}
+                  <span className="text-[7px] font-extrabold text-slate-900 tracking-tighter uppercase mt-0.5 leading-none">
+                    Scan to Verify
+                  </span>
+                </div>
               </div>
 
               {/* Status strip */}
