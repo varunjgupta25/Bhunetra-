@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { isFirebaseConfigured, signInWithEmail, signOutUser } from '../firebase'
 
 // Initial mock user for instant hackathon testing & demo
 const DEFAULT_USER = {
@@ -29,7 +30,30 @@ export const useAppStore = create((set, get) => ({
   token: null,
 
   login: async ({ email, password, role = 'officer' }) => {
-    // Allows fast mock login + hook for Firebase signInWithEmailAndPassword
+    // 1. If Firebase is live configured and not a demo placeholder password, attempt live Firebase Auth
+    if (isFirebaseConfigured && password && password !== '••••••••') {
+      try {
+        const userCredential = await signInWithEmail(email, password)
+        const idToken = await userCredential.user.getIdToken()
+        const profile = {
+          uid: userCredential.user.uid,
+          email: userCredential.user.email,
+          displayName: userCredential.user.displayName || email.split('@')[0],
+          role: role || 'officer',
+          district: 'Live Session',
+        }
+        set({
+          user: profile,
+          isAuthenticated: true,
+          token: idToken,
+        })
+        return profile
+      } catch (err) {
+        console.warn("Live Firebase auth attempt failed, using role profile fallback:", err?.message)
+      }
+    }
+
+    // 2. Demo role login fallback for instant offline testing and presentations
     const roleProfiles = {
       admin: {
         uid: 'admin-001',
@@ -65,12 +89,17 @@ export const useAppStore = create((set, get) => ({
     set({
       user: selectedProfile,
       isAuthenticated: true,
-      token: `jwt-token-${role}-${Date.now()}`,
+      token: `dev-${role}-token`,
     })
     return selectedProfile
   },
 
-  logout: () => {
+  logout: async () => {
+    try {
+      await signOutUser()
+    } catch {
+      // Ignore
+    }
     set({
       user: null,
       isAuthenticated: false,

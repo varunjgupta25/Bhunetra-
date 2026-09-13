@@ -1,4 +1,5 @@
 import { documentApi } from './axiosClient'
+import { isFirebaseConfigured, uploadFileToFirebase } from '../firebase'
 
 /**
  * Storage & Backend Processing Pipeline Helper
@@ -20,47 +21,42 @@ import { documentApi } from './axiosClient'
 export async function uploadDirectToStorage(file, { onProgress, signal } = {}) {
   console.info('[StorageService] Initiating direct-to-storage upload for:', file.name)
 
-  // =========================================================================
-  // 🔌 CLOUD INTEGRATION SLOT: FIREBASE STORAGE / AWS S3 PRESIGNED UPLOAD
-  // =========================================================================
-  // To connect real Cloud Storage (e.g., Firebase Storage):
-  // 
-  // import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage'
-  // import { storage } from '../firebase' // import initialized Firebase app
-  // 
-  // const storageRef = ref(storage, `land-records/${Date.now()}_${file.name}`)
-  // const uploadTask = uploadBytesResumable(storageRef, file)
-  // 
-  // uploadTask.on('state_changed', 
-  //   (snapshot) => {
-  //     const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-  //     if (onProgress) onProgress(Math.round(progress))
-  //   },
-  //   (error) => { throw error },
-  //   async () => {
-  //     const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref)
-  //     return { storageUrl: downloadUrl, storagePath: storageRef.fullPath, fileId: storageRef.name }
-  //   }
-  // )
-  // =========================================================================
+  const mockFileId = `FILE-${Date.now().toString(36).toUpperCase()}`
+  const storagePath = `land-records/${mockFileId}/${file.name}`
 
-  // --- MOCK STORAGE UPLOAD SIMULATION (with smooth progress feedback) ---
+  // 1. Live Firebase Storage Upload if configured
+  if (isFirebaseConfigured) {
+    try {
+      const { downloadUrl } = await uploadFileToFirebase(file, storagePath, onProgress)
+      return {
+        storageUrl: downloadUrl,
+        storagePath,
+        fileId: mockFileId,
+        fileSize: file.size,
+        fileName: file.name,
+        fileType: file.type,
+      }
+    } catch (err) {
+      console.warn('[StorageService] Firebase Storage upload error, falling back to local flow:', err)
+    }
+  }
+
+  // 2. Mock storage upload simulation with smooth progress feedback
   const totalChunks = 20
   for (let step = 1; step <= totalChunks; step++) {
     if (signal?.aborted) {
       throw new Error('Upload cancelled by user')
     }
-    await new Promise((r) => setTimeout(r, 80))
+    await new Promise((r) => setTimeout(r, 60))
     const progress = Math.round((step / totalChunks) * 100)
     if (onProgress) onProgress(progress)
   }
 
-  const mockFileId = `FILE-${Date.now().toString(36).toUpperCase()}`
   const mockStorageUrl = `https://storage.bhunetra.gov.in/documents/${mockFileId}/${encodeURIComponent(file.name)}`
 
   return {
     storageUrl: mockStorageUrl,
-    storagePath: `land-records/${mockFileId}/${file.name}`,
+    storagePath,
     fileId: mockFileId,
     fileSize: file.size,
     fileName: file.name,
