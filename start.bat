@@ -1,27 +1,26 @@
 @echo off
-title BHUNETRA Local Dev Launcher
+title BHUNETRA Unified Server Launcher
 cls
 echo ========================================================
-echo   BHUNETRA - Land Record Digitization & Validation System
-echo   Ministry of Rural Development & DoLR (SIH26018)
+echo   BHUNETRA - Unified Single-Port Application (SIH26018)
+echo   FastAPI + React SPA Unified on Port 8000
 echo ========================================================
 echo.
 
-echo [1/2] Launching FastAPI Backend Server on http://localhost:8000...
-start "BHUNETRA Backend (FastAPI)" cmd /k "cd /d %~dp0backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
-
-timeout /t 2 /nobreak >nul
-
-echo [2/2] Launching Vite Frontend Server on http://localhost:5173...
-start "BHUNETRA Frontend (Vite + React)" cmd /k "cd /d %~dp0frontend && npm run dev"
+echo Launching Unified BHUNETRA Application on http://localhost:8000...
+start "BHUNETRA Unified Application" cmd /k "cd /d %~dp0backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
 echo.
 echo ========================================================
-echo   🚀 BHUNETRA Local Servers Successfully Started!
+echo   🚀 BHUNETRA Successfully Started on Single Port!
 echo.
-echo   ➜ Frontend App:  http://localhost:5173
-echo   ➜ Backend Docs:  http://localhost:8000/docs
+echo   ➜ Application (All-in-One): http://localhost:8000
+echo   ➜ Login Portal:             http://localhost:8000/login
+echo   ➜ Citizen Portal:           http://localhost:8000/citizen
+echo   ➜ Officer Dashboard:        http://localhost:8000/dashboard
+echo   ➜ Interactive API Docs:     http://localhost:8000/docs
 echo.
-echo   Keep the newly opened console windows open while testing.
+echo   One common port for everything. No CORS or port mismatch!
 echo ========================================================
-pause
+timeout /t 3 >nul
+start http://localhost:8000/login

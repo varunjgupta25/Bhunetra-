@@ -30,8 +30,8 @@ export async function uploadDirectToStorage(file, { onProgress, signal } = {}) {
     const result = await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest()
 
-      // Get the base URL from env (default to localhost:8000)
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+      // Get the base URL from env (defaults to empty string for common port / same-origin)
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
       xhr.open('POST', `${baseUrl}/api/documents/upload`)
 
       // Auth header - use stored token if available

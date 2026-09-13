@@ -85,9 +85,9 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-# Health Check & Root Endpoints
-@app.get("/", tags=["Health"])
-async def root():
+# API Root Endpoint
+@app.get("/api", tags=["Health"])
+async def api_root():
     return {
         "project": "Bhunetra Backend (SIH26018)",
         "version": "1.0.0",
@@ -129,14 +129,16 @@ if os.path.exists(FRONTEND_DIST_DIR):
     if os.path.exists(assets_dir):
         app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
+    @app.get("/", include_in_schema=False)
     @app.get("/{full_path:path}", include_in_schema=False)
-    async def serve_spa_frontend(full_path: str):
-        if full_path.startswith("api/") or full_path in ["docs", "redoc", "openapi.json"]:
+    async def serve_spa_frontend(full_path: str = ""):
+        if full_path and (full_path.startswith("api/") or full_path in ["api", "docs", "redoc", "openapi.json"]):
             return JSONResponse(status_code=404, content={"detail": "API route not found"})
 
-        target_file = os.path.join(FRONTEND_DIST_DIR, full_path)
-        if os.path.isfile(target_file):
-            return FileResponse(target_file)
+        if full_path:
+            target_file = os.path.join(FRONTEND_DIST_DIR, full_path)
+            if os.path.isfile(target_file):
+                return FileResponse(target_file)
 
         index_html = os.path.join(FRONTEND_DIST_DIR, "index.html")
         if os.path.exists(index_html):
