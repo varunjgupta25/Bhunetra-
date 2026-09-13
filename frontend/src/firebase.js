@@ -8,6 +8,8 @@ import { initializeApp, getApps, getApp } from 'firebase/app'
 import {
   getAuth,
   signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
   signOut,
   onAuthStateChanged,
 } from 'firebase/auth'
@@ -66,6 +68,14 @@ export const signInWithEmail = async (email, password) => {
     throw new Error("Firebase is not configured with live credentials.")
   }
   return await signInWithEmailAndPassword(auth, email, password)
+}
+
+export const signInWithGoogle = async () => {
+  if (!isFirebaseConfigured || !auth) {
+    throw new Error("Firebase is not configured with live credentials.")
+  }
+  const provider = new GoogleAuthProvider()
+  return await signInWithPopup(auth, provider)
 }
 
 export const signOutUser = async () => {

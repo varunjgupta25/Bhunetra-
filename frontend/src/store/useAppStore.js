@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { isFirebaseConfigured, signInWithEmail, signOutUser } from '../firebase'
+import { isFirebaseConfigured, signInWithEmail, signInWithGoogle, signOutUser } from '../firebase'
 
 // Initial mock user for instant hackathon testing & demo
 const DEFAULT_USER = {
@@ -80,6 +80,54 @@ export const useAppStore = create((set, get) => ({
       token: `dev-${selectedProfile.role}-token`,
     })
     return selectedProfile
+  },
+
+  loginWithGoogle: async () => {
+    // 1. If Firebase is live configured, trigger Firebase Google OAuth popup
+    if (isFirebaseConfigured) {
+      try {
+        const userCredential = await signInWithGoogle()
+        const fbUser = userCredential.user
+        const idToken = await fbUser.getIdToken()
+        const profile = {
+          uid: fbUser.uid,
+          email: fbUser.email,
+          displayName: fbUser.displayName || 'Citizen (नागरिक)',
+          photoURL: fbUser.photoURL || null,
+          role: 'civilian',
+          district: 'Pune',
+          department: 'Citizen Land Access Portal',
+        }
+        set({
+          user: profile,
+          isAuthenticated: true,
+          token: idToken,
+        })
+        return profile
+      } catch (err) {
+        if (err?.code === 'auth/popup-closed-by-user') {
+          throw new Error('Google Sign-In was closed before completion.')
+        }
+        console.warn("Live Google Sign-In failed, using mock civilian fallback:", err?.message)
+        throw err
+      }
+    }
+
+    // 2. Demo civilian fallback when Firebase keys are not yet filled in .env
+    const demoCivilian = {
+      uid: 'civilian-001',
+      email: 'citizen.sharma@gmail.com',
+      displayName: 'Rajesh Sharma (नागरिक / Citizen)',
+      role: 'civilian',
+      district: 'Pune',
+      department: 'Citizen Land Access Portal',
+    }
+    set({
+      user: demoCivilian,
+      isAuthenticated: true,
+      token: 'dev-civilian-token',
+    })
+    return demoCivilian
   },
 
   logout: async () => {
