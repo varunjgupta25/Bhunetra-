@@ -119,6 +119,11 @@ def initialize_firebase():
     global _firebase_app, _db, _bucket, _is_connected
 
     cred_path = settings.FIREBASE_CREDENTIALS_PATH
+    if not os.path.exists(cred_path):
+        backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        alt_path = os.path.join(backend_dir, "firebase-adminsdk.json")
+        if os.path.exists(alt_path):
+            cred_path = alt_path
 
     try:
         import firebase_admin
@@ -126,9 +131,12 @@ def initialize_firebase():
 
         if os.path.exists(cred_path):
             cred = credentials.Certificate(cred_path)
-            _firebase_app = firebase_admin.initialize_app(cred, {
-                'storageBucket': settings.FIREBASE_STORAGE_BUCKET
-            })
+            try:
+                _firebase_app = firebase_admin.get_app()
+            except ValueError:
+                _firebase_app = firebase_admin.initialize_app(cred, {
+                    'storageBucket': settings.FIREBASE_STORAGE_BUCKET
+                })
             _db = firestore.client()
             try:
                 _bucket = storage.bucket()
