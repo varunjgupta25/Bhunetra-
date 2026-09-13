@@ -27,32 +27,32 @@ export function Navbar() {
       label: t('dashboardTab', lang),
       path: '/dashboard',
       icon: 'dashboard',
-      roles: ['admin', 'verifier', 'officer'],
+      roles: ['officer'],
     },
     {
       label: t('citizenTab', lang),
       path: '/citizen',
       icon: 'account_balance',
-      roles: ['civilian', 'admin'],
+      roles: ['civilian'],
     },
     {
       label: t('uploadTab', lang),
       path: '/upload',
       icon: 'cloud_upload',
-      roles: ['admin', 'officer'],
+      roles: ['officer'],
     },
     {
       label: t('queueTab', lang),
       path: '/verification',
       icon: 'fact_check',
       badge: pendingVerificationCount,
-      roles: ['admin', 'verifier'],
+      roles: ['officer'],
     },
     {
       label: t('gisTab', lang),
       path: '/records',
       icon: 'map',
-      roles: ['admin', 'verifier', 'officer', 'civilian'],
+      roles: ['officer', 'civilian'],
     },
   ]
 
@@ -117,7 +117,7 @@ export function Navbar() {
               </div>
             </div>
 
-            <Link to={currentRole === 'civilian' ? '/citizen' : '/dashboard'} className="flex flex-col text-left">
+            <Link to={isAuthenticated ? (currentRole === 'civilian' ? '/citizen' : '/dashboard') : '/'} className="flex flex-col text-left">
               <div className="flex items-center gap-2">
                 <span className="text-amber-400 font-bold tracking-wide text-xs sm:text-sm uppercase">
                   {t('headerDept', lang)}
@@ -139,26 +139,20 @@ export function Navbar() {
           <div className="flex items-center gap-3">
             {isAuthenticated ? (
               <>
-                {/* Role Switcher for Hackathon Demo */}
+                {/* Role Switcher for Hackathon Demo: Strictly Officer or Citizen */}
                 <div className="hidden lg:flex items-center gap-1 bg-[#0A1E3F] p-1 rounded border border-slate-600 text-xs">
                   <span className="px-1.5 text-[10px] font-semibold text-amber-400 uppercase">{t('roleTag', lang)}</span>
-                  {(['officer', 'verifier', 'admin', 'civilian']).map((r) => (
+                  {['officer', 'civilian'].map((r) => (
                     <button
                       key={r}
                       onClick={() => switchDemoRole(r)}
-                      className={`px-2 py-0.5 rounded text-[11px] font-bold capitalize transition-all ${
+                      className={`px-2.5 py-0.5 rounded text-[11px] font-bold capitalize transition-all ${
                         currentRole === r
                           ? 'bg-amber-400 text-slate-950 shadow-sm'
                           : 'text-slate-300 hover:text-white'
                       }`}
                     >
-                      {r === 'officer'
-                        ? t('roleOfficer', lang)
-                        : r === 'verifier'
-                        ? t('roleVerifier', lang)
-                        : r === 'admin'
-                        ? t('roleAdmin', lang)
-                        : t('roleCivilian', lang)}
+                      {r === 'officer' ? t('roleOfficer', lang) : t('roleCivilian', lang)}
                     </button>
                   ))}
                 </div>
@@ -170,10 +164,10 @@ export function Navbar() {
                   </div>
                   <div className="hidden md:flex flex-col text-left">
                     <span className="text-xs font-bold text-white leading-tight">
-                      {user?.displayName || 'के. एस. पाटील'}
+                      {user?.displayName || (currentRole === 'civilian' ? 'Rajesh Sharma' : 'K. S. Patil')}
                     </span>
                     <span className="text-[10px] text-amber-300 font-semibold">
-                      {user?.district || 'पुणे'} महसूल विभाग
+                      {currentRole === 'civilian' ? 'नागरिक पोर्टल (Citizen)' : `${user?.district || 'पुणे'} महसूल अधिकारी`}
                     </span>
                   </div>
                   <button
@@ -186,13 +180,24 @@ export function Navbar() {
                 </div>
               </>
             ) : (
-              <Link
-                to="/login"
-                className="bg-amber-400 hover:bg-amber-300 text-slate-950 px-4 py-1.5 rounded-md text-xs font-bold shadow-sm transition-colors flex items-center gap-1"
-              >
-                <span className="material-symbols-outlined text-[16px]">lock</span>
-                <span>{t('officerLoginBtn', lang)}</span>
-              </Link>
+              /* DUAL LOGIN ACCESS: ONLY 2 PATHS - CITIZEN OR OFFICER */
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/login?role=civilian"
+                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-1.5 rounded-lg text-xs font-black shadow-sm transition-all flex items-center gap-1.5 border border-emerald-300"
+                >
+                  <span className="material-symbols-outlined text-[16px]">person</span>
+                  <span>{lang === 'mr' ? 'नागरिक प्रवेश' : 'Citizen Portal'}</span>
+                </Link>
+
+                <Link
+                  to="/login?role=officer"
+                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 px-3 py-1.5 rounded-lg text-xs font-black shadow-sm transition-all flex items-center gap-1.5 border border-amber-300"
+                >
+                  <span className="material-symbols-outlined text-[16px]">shield_person</span>
+                  <span>{lang === 'mr' ? 'अधिकारी लॉगिन' : 'Officer Login'}</span>
+                </Link>
+              </div>
             )}
           </div>
         </div>

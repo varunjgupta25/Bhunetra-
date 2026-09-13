@@ -5,13 +5,21 @@ Endpoints:
 - POST /api/documents/{docId}/process
 - GET /api/documents
 - GET /api/documents/{docId}
+- GET /api/documents/static/{path}  (local file serving)
 """
 import uuid
 import logging
+import shutil
+from pathlib import Path
 from datetime import datetime, timezone
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, BackgroundTasks, status, Response
+from fastapi.responses import FileResponse
 
 from app.firebase_config import get_db, get_storage_bucket, generate_signed_url
+
+# Local disk storage directory (fallback when Firebase Storage is not available)
+UPLOADS_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 from app.utils.auth import get_current_user, AuthenticatedUser, require_role
 from app.schemas.common import UserRole, DocumentStatus, VerificationStatus, AuditAction
 from app.schemas.document import DocumentUploadResponse, DocumentItem, DocumentListResponse
@@ -90,7 +98,7 @@ async def upload_document(
     uploaded_at = datetime.now(timezone.utc).isoformat()
     file_type = "pdf" if "pdf" in content_type or file.filename.lower().endswith(".pdf") else "image"
 
-    # Save to Firebase Storage if connected, otherwise buffer locally
+    # Save to Firebase Storage if connected, otherwise persist to local disk
     bucket = get_storage_bucket()
     if bucket:
         try:
@@ -98,11 +106,17 @@ async def upload_document(
             blob.upload_from_string(file_bytes, content_type=file.content_type)
             storage_url = generate_signed_url(storage_path)
         except Exception as e:
-            logger.warning(f"Firebase storage upload failed: {e}. Caching locally.")
-            storage_url = f"/api/documents/static/{storage_path}"
-    else:
-        storage_url = f"/api/documents/static/{storage_path}"
+            logger.warning(f"Firebase storage upload failed: {e}. Saving to local disk.")
+            bucket = None
 
+    if not bucket:
+        # Persist to disk so file survives server restarts and can be downloaded
+        local_file_path = UPLOADS_DIR / f"{doc_id}.{file_ext}"
+        local_file_path.write_bytes(file_bytes)
+        storage_url = f"/api/documents/static/{doc_id}.{file_ext}"
+        logger.info(f"📁 File saved locally: {local_file_path}")
+
+    # Also keep in-memory cache for fast in-request access
     DOC_FILE_CACHE[doc_id] = {
         "bytes": file_bytes,
         "filename": file.filename,
@@ -176,9 +190,12 @@ async def upload_documents_batch(
                 blob.upload_from_string(file_bytes, content_type=file.content_type)
                 storage_url = generate_signed_url(storage_path)
             except Exception:
-                storage_url = f"/api/documents/static/{storage_path}"
-        else:
-            storage_url = f"/api/documents/static/{storage_path}"
+                bucket = None
+
+        if not bucket:
+            local_file_path = UPLOADS_DIR / f"{doc_id}.{file_ext}"
+            local_file_path.write_bytes(file_bytes)
+            storage_url = f"/api/documents/static/{doc_id}.{file_ext}"
 
         DOC_FILE_CACHE[doc_id] = {
             "bytes": file_bytes,
@@ -425,6 +442,14 @@ async def get_raw_document(docId: str):
     """
     cached = DOC_FILE_CACHE.get(docId)
     if not cached:
+        # Check local disk uploads first
+        for ext in ["jpg", "jpeg", "png", "pdf", "svg"]:
+            disk_path = UPLOADS_DIR / f"{docId}.{ext}"
+            if disk_path.exists():
+                return FileResponse(
+                    path=str(disk_path),
+                    media_type="application/pdf" if ext == "pdf" else "image/jpeg"
+                )
         # Fallback: check demo_papers directory
         import os
         demo_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "demo_papers"))
@@ -440,3 +465,31 @@ async def get_raw_document(docId: str):
         media_type=cached.get("content_type", "image/jpeg")
     )
 
+
+@router.get("/static/{filename}", summary="Serve Locally Stored Document File")
+async def serve_local_file(filename: str):
+    """
+    Serves files stored in the local uploads/ directory.
+    Used as fallback when Firebase Storage is not configured (Spark plan).
+    Supports inline browser preview AND downloadable via Content-Disposition header.
+    """
+    file_path = UPLOADS_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"File '{filename}' not found.")
+
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    media_types = {
+        "pdf": "application/pdf",
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "png": "image/png",
+        "svg": "image/svg+xml",
+    }
+    media_type = media_types.get(ext, "application/octet-stream")
+
+    return FileResponse(
+        path=str(file_path),
+        media_type=media_type,
+        filename=filename,
+        headers={"Content-Disposition": f"inline; filename={filename}"}
+    )

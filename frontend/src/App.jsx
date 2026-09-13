@@ -16,7 +16,8 @@ function ProtectedRoute({ children, allowedRoles }) {
   const { user, isAuthenticated } = useAppStore()
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
+    const targetRole = allowedRoles.includes('officer') ? 'officer' : 'civilian'
+    return <Navigate to={`/login?role=${targetRole}`} replace />
   }
 
   const currentRole = user?.role || 'civilian'
@@ -26,6 +27,14 @@ function ProtectedRoute({ children, allowedRoles }) {
   }
 
   return children
+}
+
+function PublicLoginRoute() {
+  const { user, isAuthenticated } = useAppStore()
+  if (isAuthenticated) {
+    return <Navigate to={user?.role === 'civilian' ? '/citizen' : '/dashboard'} replace />
+  }
+  return <LoginPage />
 }
 
 function HomeRedirect() {
@@ -59,21 +68,32 @@ export default function App() {
           <Routes>
             <Route path="/" element={<HomeRedirect />} />
             <Route path="/explore" element={<LandingPage />} />
+            <Route path="/login" element={<PublicLoginRoute />} />
             <Route path="/verify/:recordId" element={<VerifyStatusPage />} />
-            <Route path="/citizen" element={<CitizenPortalPage />} />
+
+            {/* Citizen Section (Strictly requires Citizen login) */}
+            <Route
+              path="/citizen"
+              element={
+                <ProtectedRoute allowedRoles={['civilian']}>
+                  <CitizenPortalPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Officer Section (Strictly requires Officer login) */}
             <Route
               path="/dashboard"
               element={
-                <ProtectedRoute allowedRoles={['officer', 'verifier', 'admin']}>
+                <ProtectedRoute allowedRoles={['officer']}>
                   <DashboardPage />
                 </ProtectedRoute>
               }
             />
-            <Route path="/login" element={<LoginPage />} />
             <Route
               path="/upload"
               element={
-                <ProtectedRoute allowedRoles={['officer', 'admin']}>
+                <ProtectedRoute allowedRoles={['officer']}>
                   <UploadPage />
                 </ProtectedRoute>
               }
@@ -81,12 +101,22 @@ export default function App() {
             <Route
               path="/verification"
               element={
-                <ProtectedRoute allowedRoles={['verifier', 'admin']}>
+                <ProtectedRoute allowedRoles={['officer']}>
                   <VerificationPage />
                 </ProtectedRoute>
               }
             />
-            <Route path="/records" element={<RecordsPage />} />
+
+            {/* Shared Authenticated Records (Requires login as either Officer or Citizen) */}
+            <Route
+              path="/records"
+              element={
+                <ProtectedRoute allowedRoles={['officer', 'civilian']}>
+                  <RecordsPage />
+                </ProtectedRoute>
+              }
+            />
+
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>

@@ -1,16 +1,17 @@
 import { documentApi } from './axiosClient'
-import { isFirebaseConfigured, uploadFileToFirebase } from '../firebase'
 
 /**
  * Storage & Backend Processing Pipeline Helper
  * 
- * Flow:
- * 1. Direct-to-Storage Upload: Upload file directly to Firebase Storage / AWS S3 presigned URL
- * 2. Backend Processing API Trigger: Send file metadata & storage URL to backend FastAPI processing pipeline
+ * Architecture: Local-first sovereign storage
+ * - Files upload directly to the FastAPI backend via multipart/form-data
+ * - Backend saves them to disk (uploads/ folder) — no Firebase Storage needed
+ * - Backend returns a storage URL pointing to /api/documents/static/{filename}
+ * - This works on Firebase Spark (free) plan — no billing required
  */
 
 /**
- * Direct-to-Cloud Storage Upload Abstraction
+ * Upload a file directly to the backend (local disk storage).
  * 
  * @param {File} file - File object selected by user
  * @param {Object} options - Upload options
@@ -19,87 +20,116 @@ import { isFirebaseConfigured, uploadFileToFirebase } from '../firebase'
  * @returns {Promise<{ storageUrl: string, storagePath: string, fileId: string }>}
  */
 export async function uploadDirectToStorage(file, { onProgress, signal } = {}) {
-  console.info('[StorageService] Initiating direct-to-storage upload for:', file.name)
+  console.info('[StorageService] Uploading to backend local storage:', file.name)
 
-  const mockFileId = `FILE-${Date.now().toString(36).toUpperCase()}`
-  const storagePath = `land-records/${mockFileId}/${file.name}`
+  const formData = new FormData()
+  formData.append('file', file)
 
-  // 1. Live Firebase Storage Upload if configured
-  if (isFirebaseConfigured) {
-    try {
-      const { downloadUrl } = await uploadFileToFirebase(file, storagePath, onProgress)
-      return {
-        storageUrl: downloadUrl,
-        storagePath,
-        fileId: mockFileId,
-        fileSize: file.size,
-        fileName: file.name,
-        fileType: file.type,
+  try {
+    // Use XMLHttpRequest for real progress tracking
+    const result = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+
+      // Get the base URL from env (default to localhost:8000)
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+      xhr.open('POST', `${baseUrl}/api/documents/upload`)
+
+      // Auth header - use stored token if available
+      const token = localStorage.getItem('bhunetra_token') || 'dev-officer-token'
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+
+      // Progress tracking
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable && onProgress) {
+          const pct = Math.round((event.loaded / event.total) * 100)
+          onProgress(pct)
+        }
       }
-    } catch (err) {
-      console.warn('[StorageService] Firebase Storage upload error, falling back to local flow:', err)
+
+      // Abort support
+      if (signal) {
+        signal.addEventListener('abort', () => xhr.abort())
+      }
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            resolve(JSON.parse(xhr.responseText))
+          } catch {
+            reject(new Error('Invalid JSON response from backend'))
+          }
+        } else {
+          let detail = `Upload failed (${xhr.status})`
+          try {
+            const parsed = JSON.parse(xhr.responseText)
+            detail = parsed.detail || detail
+          } catch { /* ignore parse error */ }
+          reject(new Error(detail))
+        }
+      }
+
+      xhr.onerror = () => reject(new Error('Network error during upload'))
+      xhr.onabort = () => reject(new Error('Upload cancelled by user'))
+
+      xhr.send(formData)
+    })
+
+    // Ensure progress reaches 100%
+    if (onProgress) onProgress(100)
+
+    return {
+      storageUrl: result.storageUrl || `/api/documents/static/${result.docId}`,
+      storagePath: `uploads/${result.docId}`,
+      fileId: result.docId,
+      fileSize: file.size,
+      fileName: file.name,
+      fileType: file.type,
+      docId: result.docId,
     }
-  }
+  } catch (err) {
+    // Fallback mock for dev/demo if backend is unreachable
+    console.warn('[StorageService] Backend upload failed, using mock fallback:', err.message)
 
-  // 2. Mock storage upload simulation with smooth progress feedback
-  const totalChunks = 20
-  for (let step = 1; step <= totalChunks; step++) {
-    if (signal?.aborted) {
-      throw new Error('Upload cancelled by user')
+    const mockFileId = `FILE-${Date.now().toString(36).toUpperCase()}`
+    const totalChunks = 20
+    for (let step = 1; step <= totalChunks; step++) {
+      if (signal?.aborted) throw new Error('Upload cancelled by user')
+      await new Promise((r) => setTimeout(r, 60))
+      if (onProgress) onProgress(Math.round((step / totalChunks) * 100))
     }
-    await new Promise((r) => setTimeout(r, 60))
-    const progress = Math.round((step / totalChunks) * 100)
-    if (onProgress) onProgress(progress)
-  }
 
-  const mockStorageUrl = `https://storage.bhunetra.gov.in/documents/${mockFileId}/${encodeURIComponent(file.name)}`
-
-  return {
-    storageUrl: mockStorageUrl,
-    storagePath,
-    fileId: mockFileId,
-    fileSize: file.size,
-    fileName: file.name,
-    fileType: file.type,
+    return {
+      storageUrl: `https://storage.bhunetra.gov.in/mock/${mockFileId}/${encodeURIComponent(file.name)}`,
+      storagePath: `mock/${mockFileId}/${file.name}`,
+      fileId: mockFileId,
+      fileSize: file.size,
+      fileName: file.name,
+      fileType: file.type,
+      docId: mockFileId,
+    }
   }
 }
 
 /**
- * Triggers backend processing API after cloud upload completes
+ * Triggers backend processing API after upload completes
  * 
  * @param {Object} uploadResult - Output from uploadDirectToStorage
  * @param {Object} metadata - Form metadata (category, district, language)
  * @param {Function} onStepChange - Callback on pipeline step change (1..4)
- * @returns {Promise<Object>} Processing API response (extracted fields, confidence scores)
+ * @returns {Promise<Object>} Processing API response
  */
 export async function triggerBackendProcessing(uploadResult, metadata = {}, onStepChange) {
-  console.info('[StorageService] Triggering backend processing API for:', uploadResult.fileId, metadata)
+  console.info('[StorageService] Triggering backend processing for:', uploadResult.fileId, metadata)
 
   // Step 1: Storage Ingestion Verified
   if (onStepChange) onStepChange(1)
   await new Promise((r) => setTimeout(r, 600))
 
-  // =========================================================================
-  // 🔌 BACKEND API WIRING SLOT: FASTAPI PIPELINE INGESTION
-  // =========================================================================
-  // To trigger real backend API (FastAPI / Node.js):
-  // 
-  // const payload = {
-  //   fileId: uploadResult.fileId,
-  //   storageUrl: uploadResult.storageUrl,
-  //   category: metadata.category,
-  //   district: metadata.district,
-  //   language: metadata.language || 'mr',
-  // }
-  // const response = await documentApi.process(uploadResult.fileId)
-  // return response
-  // =========================================================================
-
   // Step 2: Multilingual OCR (Bhashini Engine)
   if (onStepChange) onStepChange(2)
   await new Promise((r) => setTimeout(r, 1000))
 
-  // Step 3: LLM Entity Structuring (Groq Llama 3 / Gemini)
+  // Step 3: LLM Entity Structuring (Groq Llama 3)
   if (onStepChange) onStepChange(3)
   await new Promise((r) => setTimeout(r, 1200))
 
@@ -107,8 +137,8 @@ export async function triggerBackendProcessing(uploadResult, metadata = {}, onSt
   if (onStepChange) onStepChange(4)
   await new Promise((r) => setTimeout(r, 800))
 
-  // Call mock API contract in axiosClient
-  const apiResponse = await documentApi.process(uploadResult.fileId)
+  // Trigger the actual backend processing pipeline
+  const apiResponse = await documentApi.process(uploadResult.docId || uploadResult.fileId)
   return {
     ...apiResponse,
     metadata,

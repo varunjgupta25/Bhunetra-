@@ -1,6 +1,8 @@
 /**
  * Firebase Client SDK Configuration & Services for BHUNETRA
- * Handles Authentication, Firestore DB, and Cloud Storage with dual-mode fallback.
+ * Handles Authentication and Firestore DB.
+ * NOTE: Firebase Storage is NOT used — files are stored locally on the backend
+ * (compatible with Firebase Spark free plan — no billing required).
  */
 import { initializeApp, getApps, getApp } from 'firebase/app'
 import {
@@ -20,13 +22,6 @@ import {
   query,
   where,
 } from 'firebase/firestore'
-import {
-  getStorage,
-  ref,
-  uploadBytes,
-  uploadBytesResumable,
-  getDownloadURL,
-} from 'firebase/storage'
 
 // 1. Firebase Project Configuration
 const firebaseConfig = {
@@ -49,14 +44,12 @@ export const isFirebaseConfigured = Boolean(
 let app = null
 let auth = null
 let db = null
-let storage = null
 
 if (isFirebaseConfigured) {
   try {
     app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
     auth = getAuth(app)
     db = getFirestore(app)
-    storage = getStorage(app)
     console.log("🔥 [BHUNETRA] Live Firebase initialized successfully for project:", firebaseConfig.projectId)
   } catch (error) {
     console.warn("⚠️ [BHUNETRA] Live Firebase initialization failed:", error)
@@ -65,7 +58,7 @@ if (isFirebaseConfigured) {
   console.info("ℹ️ [BHUNETRA] Running in Local / Sovereign Mock Mode (Configure .env for live Firebase).")
 }
 
-export { app, auth, db, storage, firebaseConfig }
+export { app, auth, db, firebaseConfig }
 
 // Auth Helpers
 export const signInWithEmail = async (email, password) => {
@@ -86,33 +79,4 @@ export const getCurrentUserToken = async () => {
     return await auth.currentUser.getIdToken()
   }
   return null
-}
-
-// Storage Helper
-export const uploadFileToFirebase = async (file, storagePath, onProgress) => {
-  if (!isFirebaseConfigured || !storage) {
-    throw new Error("Firebase Storage is not configured.")
-  }
-  const storageRef = ref(storage, storagePath)
-  if (onProgress) {
-    const uploadTask = uploadBytesResumable(storageRef, file)
-    return new Promise((resolve, reject) => {
-      uploadTask.on(
-        'state_changed',
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-          onProgress(Math.round(progress))
-        },
-        (error) => reject(error),
-        async () => {
-          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref)
-          resolve({ downloadUrl, storagePath })
-        }
-      )
-    })
-  } else {
-    const snapshot = await uploadBytes(storageRef, file)
-    const downloadUrl = await getDownloadURL(snapshot.ref)
-    return { downloadUrl, storagePath }
-  }
 }

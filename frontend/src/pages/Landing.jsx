@@ -4,7 +4,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { t } from '@/utils/languages'
 
 export default function LandingPage() {
-  const { currentLanguage } = useAppStore()
+  const { currentLanguage, isAuthenticated, user } = useAppStore()
   const lang = currentLanguage || 'mr'
 
   // Interactive 6 Maharashtra Administrative Revenue Divisions with real verified DILRMP data
@@ -268,27 +268,27 @@ export default function LandingPage() {
               : "India's privacy-first, offline sovereign AI platform for Maharashtra 7/12 extracts, Devanagari OCR, automated revenue verification, and certified digital land records across all 22 official languages of India."}
           </p>
 
-          {/* Action CTAs - Direct active links without broken keys */}
+          {/* Action CTAs - Direct active links with auth gating */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 max-w-2xl mx-auto mb-8">
             <Link
-              to="/citizen"
+              to={isAuthenticated ? (user?.role === 'civilian' ? '/citizen' : '/dashboard') : '/login?role=civilian'}
               className="w-full sm:w-auto px-7 py-3.5 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-base rounded-xl shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 border border-amber-300"
             >
               <span className="text-lg">📜</span>
-              <span>{t('enterPortalBtn', lang)}</span>
+              <span>{isAuthenticated ? t('enterPortalBtn', lang) : (lang === 'mr' ? 'नागरिक प्रवेश (Citizen Login)' : 'Citizen Portal Login')}</span>
               <span className="text-xl">➔</span>
             </Link>
 
             <Link
-              to="/dashboard"
+              to={isAuthenticated ? '/dashboard' : '/login?role=officer'}
               className="w-full sm:w-auto px-6 py-3.5 bg-[#173868] hover:bg-[#1E4885] text-amber-300 hover:text-amber-200 font-bold text-base rounded-xl border border-amber-400/40 hover:border-amber-400 transition-all flex items-center justify-center gap-2"
             >
               <span>🏛️</span>
-              <span>{t('officerPortalBtn', lang)}</span>
+              <span>{isAuthenticated ? t('officerPortalBtn', lang) : (lang === 'mr' ? 'अधिकारी लॉगिन (Officer Login)' : 'Officer Login')}</span>
             </Link>
 
             <Link
-              to="/records"
+              to={isAuthenticated ? '/records' : '/login'}
               className="w-full sm:w-auto px-6 py-3.5 bg-slate-800/90 hover:bg-slate-800 text-slate-200 hover:text-white font-bold text-base rounded-xl border border-slate-600 hover:border-slate-400 transition-all flex items-center justify-center gap-2"
             >
               <span>🗺️</span>
@@ -307,7 +307,7 @@ export default function LandingPage() {
               className="bg-transparent border-none text-white text-sm placeholder-slate-400 focus:outline-none flex-1 px-2 py-1.5"
             />
             <Link
-              to={`/citizen?gat=${encodeURIComponent(quickGatNo || '142/3A')}`}
+              to={isAuthenticated ? `/citizen?gat=${encodeURIComponent(quickGatNo || '142/3A')}` : `/login?role=civilian`}
               className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-4 py-2 rounded-lg transition-all"
             >
               {lang === 'mr' ? 'शोधा' : 'Search 7/12'}
@@ -840,18 +840,18 @@ export default function LandingPage() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              to="/citizen"
+              to={isAuthenticated ? (user?.role === 'civilian' ? '/citizen' : '/dashboard') : '/login?role=civilian'}
               className="inline-flex items-center gap-2.5 px-8 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-base rounded-xl shadow-2xl transition-all transform hover:scale-105"
             >
-              <span>{t('enterPortalBtn', lang)}</span>
+              <span>{isAuthenticated ? t('enterPortalBtn', lang) : (lang === 'mr' ? 'नागरिक प्रवेश (Citizen)' : 'Citizen Portal')}</span>
               <span className="text-xl">➔</span>
             </Link>
 
             <Link
-              to="/dashboard"
+              to={isAuthenticated ? '/dashboard' : '/login?role=officer'}
               className="inline-flex items-center gap-2 px-6 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-base rounded-xl border border-slate-600 transition-all"
             >
-              <span>🏛️ {t('officerPortalBtn', lang)}</span>
+              <span>🏛️ {isAuthenticated ? t('officerPortalBtn', lang) : (lang === 'mr' ? 'अधिकारी लॉगिन (Officer)' : 'Officer Login')}</span>
             </Link>
           </div>
         </div>

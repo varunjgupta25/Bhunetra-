@@ -55,26 +55,13 @@ export const useAppStore = create((set, get) => ({
 
     // 2. Demo role login fallback for instant offline testing and presentations
     const roleProfiles = {
-      admin: {
-        uid: 'admin-001',
-        email: email || 'admin@bhunetra.gov.in',
-        displayName: 'Varun Gupta (Admin)',
-        role: 'admin',
-        district: 'All Districts',
-      },
-      verifier: {
-        uid: 'verifier-001',
-        email: email || 'verifier.nashik@bhunetra.gov.in',
-        displayName: 'A. R. Shinde (Verifier)',
-        role: 'verifier',
-        district: 'Nashik',
-      },
       officer: {
         uid: 'officer-001',
         email: email || 'officer.pune@bhunetra.gov.in',
         displayName: 'K. S. Patil (Revenue Officer)',
         role: 'officer',
         district: 'Pune',
+        department: 'Department of Land Resources',
       },
       civilian: {
         uid: 'civilian-001',
@@ -82,6 +69,7 @@ export const useAppStore = create((set, get) => ({
         displayName: 'Rajesh Sharma (नागरिक / Citizen)',
         role: 'civilian',
         district: 'Pune',
+        department: 'Citizen Land Access Portal',
       },
     }
 
@@ -89,7 +77,7 @@ export const useAppStore = create((set, get) => ({
     set({
       user: selectedProfile,
       isAuthenticated: true,
-      token: `dev-${role}-token`,
+      token: `dev-${selectedProfile.role}-token`,
     })
     return selectedProfile
   },
@@ -110,16 +98,15 @@ export const useAppStore = create((set, get) => ({
   switchDemoRole: (newRole) => {
     const { user } = get()
     if (!user) return
+    const validRole = newRole === 'civilian' ? 'civilian' : 'officer'
     const names = {
-      admin: 'Varun Gupta (Admin)',
-      verifier: 'A. R. Shinde (Verifier)',
       officer: 'K. S. Patil (Revenue Officer)',
       civilian: 'Rajesh Sharma (नागरिक / Citizen)',
     }
     const updatedUser = {
       ...user,
-      role: newRole,
-      displayName: names[newRole] || 'K. S. Patil (Revenue Officer)',
+      role: validRole,
+      displayName: names[validRole],
     }
     set({ user: updatedUser })
   },

@@ -1,24 +1,40 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAppStore } from '@/store/useAppStore'
 
 export function AuthForm() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { login } = useAppStore()
 
-  const [email, setEmail] = useState('officer@dolr.gov.in')
+  const roleParam = searchParams.get('role')
+  const initialRole = roleParam === 'civilian' ? 'civilian' : 'officer'
+  const redirectParam = searchParams.get('redirect')
+
+  const [selectedRole, setSelectedRole] = useState(initialRole)
+  const [email, setEmail] = useState(
+    initialRole === 'civilian' ? 'citizen.sharma@gmail.com' : 'officer@dolr.gov.in'
+  )
   const [password, setPassword] = useState('••••••••')
-  const [selectedRole, setSelectedRole] = useState('officer')
   const [isLoading, setIsLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+
+  // Sync state if query param changes
+  useEffect(() => {
+    if (roleParam === 'civilian') {
+      setSelectedRole('civilian')
+      setEmail('citizen.sharma@gmail.com')
+    } else if (roleParam === 'officer') {
+      setSelectedRole('officer')
+      setEmail('officer@dolr.gov.in')
+    }
+  }, [roleParam])
 
   const handleRoleChange = (roleId) => {
     setSelectedRole(roleId)
+    setErrorMessage('')
     if (roleId === 'officer') {
       setEmail('officer@dolr.gov.in')
-    } else if (roleId === 'verifier') {
-      setEmail('verifier@dolr.gov.in')
-    } else if (roleId === 'admin') {
-      setEmail('admin@dolr.gov.in')
     } else {
       setEmail('citizen.sharma@gmail.com')
     }
@@ -27,122 +43,109 @@ export function AuthForm() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
+    setErrorMessage('')
 
     try {
       await login({ email, password, role: selectedRole })
-      if (selectedRole === 'civilian') {
+      if (redirectParam) {
+        navigate(redirectParam)
+      } else if (selectedRole === 'civilian') {
         navigate('/citizen')
-      } else if (selectedRole === 'verifier') {
-        navigate('/verification')
       } else {
         navigate('/dashboard')
       }
-    } catch {
-      // Fallback
+    } catch (err) {
+      setErrorMessage(err?.message || 'Login failed. Please check your credentials.')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const roleLabels = {
-    officer: 'Revenue Officer',
-    verifier: 'Field Verifier',
-    admin: 'Admin',
-    civilian: 'Citizen Portal',
-  }
+  const isOfficer = selectedRole === 'officer'
 
   return (
-    <main className="w-full max-w-lg bg-surface-container-lowest border border-[#D0E8F5] rounded-[20px] login-shadow p-card-padding relative z-10 my-auto">
+    <main className="w-full max-w-lg bg-surface-container-lowest border border-[#D0E8F5] rounded-[24px] login-shadow p-6 sm:p-8 relative z-10 my-auto shadow-2xl bg-white dark:bg-slate-900">
       {/* Branding Header */}
-      <header className="flex flex-col items-center mb-8 text-center">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-container to-primary flex items-center justify-center text-on-primary shadow-sm">
-            <span className="material-symbols-outlined text-[28px]" data-icon="layers">
-              layers
-            </span>
+      <header className="flex flex-col items-center mb-6 text-center">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#0F2C59] to-[#1E4885] flex items-center justify-center text-amber-400 shadow-md border border-amber-400/40">
+            <span className="text-xl">🏛️</span>
           </div>
-          <h1 className="font-headline-lg text-headline-lg text-primary tracking-tight">
-            BHUNETRA
-          </h1>
-          <span className="font-mono-code text-mono-code bg-surface-container text-secondary px-2 py-1 rounded-full border border-secondary-fixed">
-            SIH26018
-          </span>
+          <div className="text-left">
+            <h1 className="text-2xl font-black text-[#0F2C59] dark:text-white tracking-tight flex items-center gap-2">
+              BHUNETRA
+              <span className="text-[10px] font-mono bg-amber-500/20 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/40">
+                SIH26018
+              </span>
+            </h1>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+              National Land Records Modernization Gateway
+            </p>
+          </div>
         </div>
-        <p className="font-body-md text-body-md text-secondary">
-          Intelligent Land Record Digitization &amp; Validation Portal
-        </p>
-        <p className="font-label-sm text-label-sm text-primary-container mt-1 uppercase tracking-wider">
-          Department of Land Resources (DoLR)
-        </p>
+
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          {isOfficer ? 'Government Revenue Officer Login' : 'Citizen Portal Login (नागरिक)'}
+        </div>
       </header>
 
-      {/* Role Selector */}
-      <div className="bg-surface-container-low p-1 rounded-xl flex flex-wrap gap-1 mb-6 border border-surface-variant">
+      {/* STRICT 2-WAY ROLE SELECTOR: OFFICER OR CITIZEN ONLY */}
+      <div className="bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl flex gap-2 mb-6 border border-slate-200 dark:border-slate-700">
         <button
-          className={`flex-1 font-label-sm text-xs py-2 px-2 text-center rounded-lg transition-all whitespace-nowrap ${
-            selectedRole === 'officer'
-              ? 'bg-surface-container-lowest text-primary shadow-sm font-bold'
-              : 'text-on-surface-variant hover:text-primary'
+          className={`flex-1 py-3 px-3 text-center rounded-xl transition-all font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer ${
+            isOfficer
+              ? 'bg-[#0F2C59] text-white shadow-lg border border-amber-400/40 scale-[1.02]'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
           type="button"
           onClick={() => handleRoleChange('officer')}
         >
-          Revenue Officer
+          <span className="text-base">🏛️</span>
+          <span>Revenue Officer</span>
         </button>
+
         <button
-          className={`flex-1 font-label-sm text-xs py-2 px-2 text-center rounded-lg transition-all whitespace-nowrap ${
-            selectedRole === 'verifier'
-              ? 'bg-surface-container-lowest text-primary shadow-sm font-bold'
-              : 'text-on-surface-variant hover:text-primary'
-          }`}
-          type="button"
-          onClick={() => handleRoleChange('verifier')}
-        >
-          Field Verifier
-        </button>
-        <button
-          className={`flex-1 font-label-sm text-xs py-2 px-2 text-center rounded-lg transition-all ${
-            selectedRole === 'admin'
-              ? 'bg-surface-container-lowest text-primary shadow-sm font-bold'
-              : 'text-on-surface-variant hover:text-primary'
-          }`}
-          type="button"
-          onClick={() => handleRoleChange('admin')}
-        >
-          Admin
-        </button>
-        <button
-          className={`flex-1 font-label-sm text-xs py-2 px-2 text-center rounded-lg transition-all whitespace-nowrap ${
-            selectedRole === 'civilian'
-              ? 'bg-amber-400 text-slate-950 shadow-sm font-bold'
-              : 'text-on-surface-variant hover:text-primary'
+          className={`flex-1 py-3 px-3 text-center rounded-xl transition-all font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer ${
+            !isOfficer
+              ? 'bg-amber-500 text-slate-950 shadow-lg border border-amber-300 scale-[1.02]'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
           type="button"
           onClick={() => handleRoleChange('civilian')}
         >
-          🏛️ Citizen (नागरिक)
+          <span className="text-base">👤</span>
+          <span>Citizen (नागरिक)</span>
         </button>
       </div>
 
+      {/* Error notification if any */}
+      {errorMessage && (
+        <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-950/50 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-semibold flex items-center gap-2">
+          <span className="material-symbols-outlined text-base">error</span>
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
       {/* Login Form */}
-      <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
         <div>
-          <label className="block font-label-sm text-label-sm text-on-surface mb-1.5" htmlFor="email">
-            Government Email ID
+          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5" htmlFor="email">
+            {isOfficer ? 'Government Official Email (शासकीय ईमेल आयडी)' : 'Citizen Email / Mobile (नागरिक ईमेल)'}
           </label>
           <div className="relative">
             <span
-              className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-tertiary-container"
+              className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]"
               data-icon="mail"
             >
-              mail
+              {isOfficer ? 'badge' : 'person'}
             </span>
             <input
-              className="w-full pl-10 pr-3 py-2.5 bg-surface-container-lowest border border-[#B8D8EE] rounded-lg font-body-md text-body-md text-on-surface placeholder:text-tertiary-container placeholder:font-medium focus:ring-2 focus:ring-primary-container focus:border-primary-container transition-shadow"
+              className="w-full pl-10 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-all font-medium"
               id="email"
-              placeholder="officer@dolr.gov.in"
+              placeholder={isOfficer ? 'officer@dolr.gov.in' : 'citizen.sharma@gmail.com'}
               required
-              type="email"
+              type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -151,22 +154,22 @@ export function AuthForm() {
 
         <div>
           <div className="flex justify-between items-center mb-1.5">
-            <label className="block font-label-sm text-label-sm text-on-surface" htmlFor="password">
-              Password
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300" htmlFor="password">
+              Password (पासवर्ड)
             </label>
-            <a className="font-label-sm text-label-sm text-primary hover:underline" href="#">
-              Forgot password?
-            </a>
+            <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium cursor-pointer hover:underline">
+              Forgot?
+            </span>
           </div>
           <div className="relative">
             <span
-              className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-tertiary-container"
+              className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]"
               data-icon="lock"
             >
               lock
             </span>
             <input
-              className="w-full pl-10 pr-3 py-2.5 bg-surface-container-lowest border border-[#B8D8EE] rounded-lg font-body-md text-body-md text-on-surface placeholder:text-tertiary-container placeholder:font-medium focus:ring-2 focus:ring-primary-container focus:border-primary-container transition-shadow"
+              className="w-full pl-10 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-all font-medium"
               id="password"
               placeholder="••••••••"
               required
@@ -178,27 +181,30 @@ export function AuthForm() {
         </div>
 
         <button
-          className="mt-2 w-full bg-primary-container text-on-primary font-body-md text-body-md font-semibold py-3 px-4 rounded-full shadow-md hover:bg-[#2DA090] transition-colors flex items-center justify-center gap-2 group cursor-pointer disabled:opacity-50"
+          className={`mt-3 w-full font-bold py-3.5 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-sm ${
+            isOfficer
+              ? 'bg-[#0F2C59] hover:bg-[#163A72] text-white border border-amber-400/40 hover:shadow-lg'
+              : 'bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black shadow-lg hover:shadow-xl'
+          }`}
           type="submit"
           disabled={isLoading}
         >
-          Access {roleLabels[selectedRole]} Portal
-          <span
-            className="material-symbols-outlined group-hover:translate-x-1 transition-transform"
-            data-icon="arrow_forward"
-          >
+          <span>
+            {isOfficer ? 'Login as Revenue Officer (शासकीय प्रवेश)' : 'Enter Citizen Portal (नागरिक प्रवेश)'}
+          </span>
+          <span className="material-symbols-outlined text-[18px]" data-icon="arrow_forward">
             arrow_forward
           </span>
         </button>
       </form>
 
-      {/* Footer Security Note */}
-      <footer className="mt-8 text-center border-t border-[#E8F4FD] pt-4">
-        <p className="font-mono-code text-[12px] text-tertiary flex items-center justify-center gap-1.5">
-          <span className="material-symbols-outlined text-[14px]" data-icon="shield_lock">
-            shield_lock
+      {/* Security Note */}
+      <footer className="mt-6 text-center border-t border-slate-100 dark:border-slate-800 pt-3.5">
+        <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1.5 font-medium">
+          <span className="material-symbols-outlined text-[14px] text-emerald-500" data-icon="verified_user">
+            verified_user
           </span>
-          Secured with Firebase Auth RBAC · TLS 1.3
+          Strict RBAC Isolation · Officer &amp; Citizen Access Enforced
         </p>
       </footer>
     </main>
