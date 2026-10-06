@@ -434,6 +434,19 @@ async def list_documents(user: AuthenticatedUser = Depends(get_current_user)):
     return DocumentListResponse(total=len(items), documents=items)
 
 
+@router.get("/{docId}", summary="Get Document Processing Status")
+async def get_document(docId: str, user: AuthenticatedUser = Depends(get_current_user)):
+    """
+    Returns document metadata and pipeline status (pending, processing, processed, failed, rejected).
+    Once processed, includes the recordId of the digitized land record.
+    """
+    db = get_db()
+    doc_snap = db.collection("documents").document(docId).get()
+    if not doc_snap.exists:
+        raise HTTPException(status_code=404, detail=f"Document with ID '{docId}' not found.")
+    return {**doc_snap.to_dict(), "docId": docId}
+
+
 @router.get("/{docId}/raw", summary="Serve Raw Document File Bytes (Offline Image/PDF)")
 async def get_raw_document(docId: str):
     """

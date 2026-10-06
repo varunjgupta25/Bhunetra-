@@ -437,20 +437,21 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
         failPipeline('Upload', err)
         return
       }
-      const docId = uploadRes?.docId || uploadRes?.id || `DOC-${Date.now()}`
+      const docId = uploadRes?.docId || uploadRes?.id
+      if (!docId) {
+        failPipeline('Upload', { message: 'Server did not return a document ID' })
+        return
+      }
 
       setProcessingStep(2)
       setUploadProgress(45)
       setUploadStatusText('Running Multilingual OCR (Bhashini Engine)...')
 
-      // Step 2: Trigger AI Processing Pipeline with 2.5s max timeout guarantee
+      // Step 2: Trigger the AI pipeline (runs in the background) and wait for the real record
       let processRes = null
       try {
-        const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 2500))
-        processRes = await Promise.race([
-          documentApi.process(docId),
-          timeoutPromise
-        ])
+        await documentApi.process(docId)
+        processRes = await documentApi.waitForResult(docId)
       } catch (err) {
         failPipeline('Processing', err)
         return
@@ -467,44 +468,33 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
         setIsUploading(false)
         setUploadStatusText('AI Extraction & Digitization Complete!')
 
-        const isDocForged = Boolean(
-          matchedDoc?.isForged ||
-          processRes?.isForged ||
-          activeFileName.toLowerCase().includes('tampered') ||
-          activeFileName.toLowerCase().includes('forged') ||
-          activeFileName.toLowerCase().includes('fake') ||
-          activeFileName.toLowerCase().includes('unauthorized') ||
-          activeFileName.toLowerCase().includes('besa') ||
-          activeFileName.toLowerCase().includes('paithan') ||
-          activeFileName.toLowerCase().includes('kalyan') ||
-          activeFileName.toLowerCase().includes('titwala') ||
-          activeFileName.toLowerCase().includes('shahapur') ||
-          activeFileName.toLowerCase().includes('mahabaleshwar') ||
-          activeFileName.toLowerCase().includes('panchavati') ||
-          activeFileName.toLowerCase().includes('sinnar') ||
-          activeFileName.toLowerCase().includes('deccan') ||
-          activeFileName.toLowerCase().includes('999')
+        // Demo papers carry a curated verdict; real uploads use the forensic engine's verdict
+        const isDocForged = matchedDoc
+          ? Boolean(matchedDoc.isForged)
+          : Boolean(processRes.isForged || processRes.forensicReport?.authenticity_rating === 'HIGH_RISK_FORGERY')
+
+        const calculatedConfidence = matchedDoc?.confidence ?? processRes.overallConfidence
+
+        // Demo papers keep their curated fields; real uploads use the pipeline's record
+        const ef = matchedDoc?.extractedFields || Object.fromEntries(
+          Object.entries(processRes.extractedFields || {})
+            .filter(([, v]) => v !== null && v !== undefined && typeof v !== 'object')
+            .map(([k, v]) => [k, { value: String(v), confidence: processRes.confidenceScores?.[k] ?? processRes.overallConfidence }])
         )
-
-        const calculatedConfidence = isDocForged
-          ? (matchedDoc?.confidence || 0.185)
-          : (matchedDoc?.confidence || (processRes?.overallConfidence ?? 0.985))
-
-        const ef = matchedDoc?.extractedFields || {}
         const entities = {
-          village: ef.village?.value || (isDocForged ? 'बेसा (Besa - Nagpur)' : 'वाघोली (Wagholi)'),
-          village_en: ef.village?.value || (isDocForged ? 'Besa (Nagpur)' : 'Wagholi'),
-          tehsil: ef.tehsil?.value || (isDocForged ? 'नागपूर ग्रामीण (Nagpur Rural)' : 'हवेली (Haveli)'),
-          tehsil_en: ef.tehsil?.value || (isDocForged ? 'Nagpur Rural' : 'Haveli'),
-          district: ef.district?.value || (isDocForged ? 'नागपूर (Nagpur)' : 'पुणे (Pune)'),
-          district_en: ef.district?.value || (isDocForged ? 'Nagpur' : 'Pune'),
-          khasra_no: ef.khasraNumber?.value || (isDocForged ? '999/B' : '142/3A'),
-          khata_no: ef.khataNumber?.value || (isDocForged ? '9999' : '582'),
-          owner_name: ef.ownerName?.value || (isDocForged ? 'संजय बनावटराव कांबळे (Sanjay Kamble - Fabricated)' : 'रमेश विठ्ठल पाटील'),
-          owner_name_en: ef.ownerName?.value || (isDocForged ? 'Sanjay Kamble (Fabricated)' : 'Ramesh Vitthal Patil'),
-          area_ha: ef.area?.value || (isDocForged ? '12.50 हेक्टर' : '1.45 हेक्टर'),
-          assessment: ef.assessment?.value || '₹ 4,500/-',
-          ownership_type: ef.ownershipType?.value || (isDocForged ? '⚠️ अनधिकृत कर माफी (Illegal Tax Waiver & Forged Record)' : 'भोगवटादार वर्ग - १'),
+          village: ef.village?.value || '—',
+          village_en: ef.village?.value || '—',
+          tehsil: ef.tehsil?.value || '—',
+          tehsil_en: ef.tehsil?.value || '—',
+          district: ef.district?.value || '—',
+          district_en: ef.district?.value || '—',
+          khasra_no: ef.khasraNumber?.value || '—',
+          khata_no: ef.khataNumber?.value || '—',
+          owner_name: ef.ownerName?.value || '—',
+          owner_name_en: ef.ownerName?.value || '—',
+          area_ha: ef.area?.value || ef.landArea?.value || '—',
+          assessment: ef.assessment?.value || '—',
+          ownership_type: ef.ownershipType?.value || '—',
           liens: isDocForged
             ? '❌ AI FRAUD ALERT: Seal Signature Mismatch & Bogus Index in 1M DB'
             : 'निरंक (Clear Title / No Encumbrances)',
@@ -512,15 +502,15 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
 
         // Build comprehensive extraction payload preserving demo/fraud state
         const finalResult = {
-          ...(processRes?.extractedFields ? processRes : {}),
+          ...processRes,
           docId,
-          recordId: matchedDoc ? matchedDoc.id : `REC-${Date.now()}`,
-          docKey: matchedDoc ? matchedDoc.key : (isDocForged ? '712_tampered' : '712_auth_1'),
+          recordId: matchedDoc ? matchedDoc.id : processRes.recordId,
+          docKey: matchedDoc ? matchedDoc.key : null,
           categoryId: matchedDoc ? matchedDoc.categoryId : '712_extract',
-          category: matchedDoc ? matchedDoc.category : 'VILLAGE_FORM_7_12',
+          category: matchedDoc ? matchedDoc.category : processRes.documentCategory,
           categoryLabel: matchedDoc ? matchedDoc.categoryLabel : 'गाव नमुना ७/१२ उतारा',
           isForged: isDocForged,
-          status: isDocForged ? 'FLAGGED_ANOMALY' : 'VERIFIED',
+          status: isDocForged ? 'FLAGGED_ANOMALY' : (matchedDoc ? 'VERIFIED' : processRes.verificationStatus),
           overallConfidence: calculatedConfidence,
           confidenceScores: ef
             ? Object.fromEntries(Object.entries(ef).map(([k, v]) => [k, v.confidence]))

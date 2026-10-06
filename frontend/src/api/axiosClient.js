@@ -81,11 +81,32 @@ export const documentApi = {
    * @returns {Promise<Object>} Extracted record with confidence scores
    */
   process: async (docId) => {
-    return await axiosClient.post(`/api/documents/${docId}/process`)
+    return await axiosClient.post(`/api/documents/${docId}/process`, null, { timeout: 120000 })
   },
 
   getById: async (docId) => {
     return await axiosClient.get(`/api/documents/${docId}`)
+  },
+
+  /**
+   * Polls the document status until the background pipeline finishes, then
+   * returns the digitized land record. CPU OCR can take well over a minute.
+   * @param {string} docId
+   * @returns {Promise<Object>} LandRecord created by the pipeline
+   */
+  waitForResult: async (docId, { timeoutMs = 180000, intervalMs = 2000 } = {}) => {
+    const deadline = Date.now() + timeoutMs
+    while (Date.now() < deadline) {
+      const doc = await documentApi.getById(docId)
+      if (doc.status === 'processed' && doc.recordId) {
+        return await recordsApi.getRecordById(doc.recordId)
+      }
+      if (doc.status === 'failed' || doc.status === 'rejected') {
+        throw { status: 422, message: doc.errorMessage || `Document ${doc.status}` }
+      }
+      await new Promise((r) => setTimeout(r, intervalMs))
+    }
+    throw { status: 408, message: `Processing did not finish within ${timeoutMs / 1000}s` }
   },
 }
 
