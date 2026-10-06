@@ -70,22 +70,9 @@ export const documentApi = {
    * @returns {Promise<{ docId: string, storageUrl: string, status: string }>}
    */
   upload: async (formData) => {
-    try {
-      return await axiosClient.post('/api/documents/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-    } catch (err) {
-      // Fallback mock simulation for frontend prototyping/demo
-      console.info('[Mock Mode] Simulating document upload endpoint')
-      await new Promise((r) => setTimeout(r, 900))
-      return {
-        docId: `DOC-${Date.now().toString(36).toUpperCase()}`,
-        storageUrl: 'https://firebasestorage.googleapis.com/v0/b/bhunetra/mock-doc.png',
-        status: 'pending',
-        fileName: formData.get('file')?.name || 'uploaded_document.png',
-        fileType: formData.get('file')?.type?.includes('pdf') ? 'pdf' : 'image',
-      }
-    }
+    return await axiosClient.post('/api/documents/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
   },
 
   /**
@@ -94,88 +81,7 @@ export const documentApi = {
    * @returns {Promise<Object>} Extracted record with confidence scores
    */
   process: async (docId) => {
-    try {
-      return await axiosClient.post(`/api/documents/${docId}/process`)
-    } catch (err) {
-      console.info('[Mock Mode] Simulating OCR & Groq LLM extraction pipeline')
-      await new Promise((r) => setTimeout(r, 1600))
-      
-      // Deterministic extraction record data with fixed per-field values and confidence
-      const recordId = 'REC-712-PUNE-0941'
-      const overallConfidence = 0.78
-
-      const extractedFields = {
-        villageCode: {
-          value: 'MH-PN-SH-0042',
-          confidence: 0.98,
-        },
-        khasraNumber: {
-          value: '248',
-          confidence: 0.42,
-        },
-        khataNumber: {
-          value: '582',
-          confidence: 0.91,
-        },
-        ownerName: {
-          value: 'बाबूराव रामचंद्र पाटील (Baburao Ramchandra Patil)',
-          confidence: 0.98,
-        },
-        village: {
-          value: 'हवेली (Haveli)',
-          confidence: 0.98,
-        },
-        tehsil: {
-          value: 'पुणे शहर (Pune City)',
-          confidence: 0.95,
-        },
-        district: {
-          value: 'पुणे (Pune)',
-          confidence: 0.99,
-        },
-        landArea: {
-          value: '1.25 हेक्टर (Hectare)',
-          confidence: 0.76,
-        },
-        area: {
-          value: '1.25',
-          confidence: 0.76,
-        },
-        assessment: {
-          value: '₹ 4500',
-          confidence: 0.84,
-        },
-        ownershipType: {
-          value: 'भोगवटादार वर्ग-१ (Class 1 Occupant)',
-          confidence: 0.86,
-        },
-      }
-
-      const confidenceScores = {
-        villageCode: extractedFields.villageCode.confidence,
-        khasraNumber: extractedFields.khasraNumber.confidence,
-        khataNumber: extractedFields.khataNumber.confidence,
-        ownerName: extractedFields.ownerName.confidence,
-        village: extractedFields.village.confidence,
-        tehsil: extractedFields.tehsil.confidence,
-        district: extractedFields.district.confidence,
-        landArea: extractedFields.landArea.confidence,
-        area: extractedFields.area.confidence,
-        assessment: extractedFields.assessment.confidence,
-        ownershipType: extractedFields.ownershipType.confidence,
-      }
-
-      return {
-        recordId,
-        docId,
-        extractedFields,
-        confidenceScores,
-        overallConfidence,
-        verificationStatus: 'pending-review',
-        flaggedFields: ['khasraNumber'],
-        processedAt: '2026-08-25T10:30:00.000Z',
-      }
-    }
+    return await axiosClient.post(`/api/documents/${docId}/process`)
   },
 
   getById: async (docId) => {

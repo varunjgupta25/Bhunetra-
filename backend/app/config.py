@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     # App Settings
     APP_NAME: str = "Bhunetra Backend"
     ENVIRONMENT: str = "development"
-    DEBUG: bool = True
+    DEBUG: bool = False
     PORT: int = 8000
 
     # CORS Settings (Frontend integration)
@@ -34,7 +34,18 @@ class Settings(BaseSettings):
     # Firebase Admin SDK Configuration
     FIREBASE_CREDENTIALS_PATH: str = "./firebase-adminsdk.json"
     FIREBASE_STORAGE_BUCKET: str = "bhunetra-sih.appspot.com"
-    ALLOW_DEV_AUTH_BYPASS: bool = True
+    # Fail startup instead of falling back to the in-memory mock Firestore
+    REQUIRE_FIREBASE: bool = False
+    # Mock dev tokens are honoured only when this is True AND ENVIRONMENT != production
+    ALLOW_DEV_AUTH_BYPASS: bool = False
+
+    @property
+    def is_production(self) -> bool:
+        return self.ENVIRONMENT.strip().lower() == "production"
+
+    @property
+    def dev_auth_bypass_enabled(self) -> bool:
+        return self.ALLOW_DEV_AUTH_BYPASS and not self.is_production
 
     # Bhashini OCR API Configuration
     BHASHINI_API_KEY: str = Field(default="", description="Bhashini Authorization Key")

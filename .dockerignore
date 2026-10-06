@@ -1,0 +1,44 @@
+# VCS, CI, editor
+.git
+.github
+.kilo
+.vscode
+.idea
+**/.DS_Store
+
+# Secrets & local env (Firebase JSON is mounted as a secret file at runtime)
+**/.env
+**/.env.*
+!**/.env.example
+**/firebase-adminsdk*.json
+**/*.pem
+**/*.key
+
+# Node / frontend build output (rebuilt inside the image)
+**/node_modules
+frontend/dist
+frontend/.vite
+
+# Python caches & test artefacts
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+.venv
+venv
+env
+backend/tests
+
+# Runtime data: uploads come from a persistent disk, not the image
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Large generated datasets (gitignored; regenerate or mount if needed)
+backend/app/data/*.db
+backend/app/data/*.csv
+backend/app/data/synthetic_datasets/*.json
+backend/app/data/synthetic_datasets/*.csv
+backend/*.db
+demo_output
+docs
+*.docx
+*.log

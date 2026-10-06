@@ -408,6 +408,15 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
 
     const matchedDoc = findDemoDocumentByFileName(activeFileName)
 
+    // Surface backend failures to the user instead of fabricating a result
+    const failPipeline = (stage, err) => {
+      console.error(`[Upload Pipeline] ${stage} failed`, err)
+      setProcessingStep(0)
+      setUploadProgress(0)
+      setUploadStatusText('Ready to ingest')
+      setUploadError(`${stage} failed: ${err?.message || 'Unexpected error. Please try again.'}`)
+    }
+
     try {
       const formData = new FormData()
       if (selectedRawFile) {
@@ -425,7 +434,8 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
       try {
         uploadRes = await documentApi.upload(formData)
       } catch (err) {
-        console.warn('Backend upload notice, using client pipeline', err)
+        failPipeline('Upload', err)
+        return
       }
       const docId = uploadRes?.docId || uploadRes?.id || `DOC-${Date.now()}`
 
@@ -442,7 +452,8 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
           timeoutPromise
         ])
       } catch (err) {
-        console.warn('Backend process notice, using fast pipeline', err)
+        failPipeline('Processing', err)
+        return
       }
 
       setProcessingStep(3)
@@ -527,77 +538,7 @@ export function UploadForm({ onComplete, hidePipeline = false }) {
         }
       }, 600)
     } catch (err) {
-      console.warn('[Upload Pipeline Notice]', err)
-      setTimeout(() => {
-        setProcessingStep(4)
-        setUploadProgress(100)
-        setIsProcessing(false)
-        setIsUploading(false)
-        setUploadStatusText('Completed with fast verification.')
-        
-        const isDocForged = Boolean(
-          matchedDoc?.isForged ||
-          activeFileName.toLowerCase().includes('tampered') ||
-          activeFileName.toLowerCase().includes('forged') ||
-          activeFileName.toLowerCase().includes('fake') ||
-          activeFileName.toLowerCase().includes('unauthorized') ||
-          activeFileName.toLowerCase().includes('besa') ||
-          activeFileName.toLowerCase().includes('paithan') ||
-          activeFileName.toLowerCase().includes('kalyan') ||
-          activeFileName.toLowerCase().includes('titwala') ||
-          activeFileName.toLowerCase().includes('shahapur') ||
-          activeFileName.toLowerCase().includes('mahabaleshwar') ||
-          activeFileName.toLowerCase().includes('panchavati') ||
-          activeFileName.toLowerCase().includes('sinnar') ||
-          activeFileName.toLowerCase().includes('deccan') ||
-          activeFileName.toLowerCase().includes('999')
-        )
-
-        const calculatedConfidence = isDocForged ? (matchedDoc?.confidence || 0.185) : 0.985
-        const ef = matchedDoc?.extractedFields || {}
-
-        const finalResult = {
-          docId: `DOC-${Date.now()}`,
-          recordId: matchedDoc ? matchedDoc.id : `REC-${Date.now()}`,
-          docKey: matchedDoc ? matchedDoc.key : (isDocForged ? '712_tampered' : '712_auth_1'),
-          categoryId: matchedDoc ? matchedDoc.categoryId : '712_extract',
-          category: matchedDoc ? matchedDoc.category : 'VILLAGE_FORM_7_12',
-          categoryLabel: matchedDoc ? matchedDoc.categoryLabel : 'गाव नमुना ७/१२ उतारा',
-          isForged: isDocForged,
-          status: isDocForged ? 'FLAGGED_ANOMALY' : 'VERIFIED',
-          overallConfidence: calculatedConfidence,
-          confidenceScores: ef
-            ? Object.fromEntries(Object.entries(ef).map(([k, v]) => [k, v.confidence]))
-            : {},
-          extractedFields: ef,
-          boundingBoxes: matchedDoc ? matchedDoc.boundingBoxes : {},
-          entities: {
-            village: ef.village?.value || (isDocForged ? 'बेसा (Besa - Nagpur)' : 'वाघोली (Wagholi)'),
-            village_en: ef.village?.value || (isDocForged ? 'Besa (Nagpur)' : 'Wagholi'),
-            tehsil: ef.tehsil?.value || (isDocForged ? 'नागपूर ग्रामीण (Nagpur Rural)' : 'हवेली (Haveli)'),
-            tehsil_en: ef.tehsil?.value || (isDocForged ? 'Nagpur Rural' : 'Haveli'),
-            district: ef.district?.value || (isDocForged ? 'नागपूर (Nagpur)' : 'पुणे (Pune)'),
-            district_en: ef.district?.value || (isDocForged ? 'Nagpur' : 'Pune'),
-            khasra_no: ef.khasraNumber?.value || (isDocForged ? '999/B' : '142/3A'),
-            khata_no: ef.khataNumber?.value || (isDocForged ? '9999' : '582'),
-            owner_name: ef.ownerName?.value || (isDocForged ? 'संजय बनावटराव कांबळे (Sanjay Kamble - Fabricated)' : 'रमेश विठ्ठल पाटील'),
-            owner_name_en: ef.ownerName?.value || (isDocForged ? 'Sanjay Kamble (Fabricated)' : 'Ramesh Vitthal Patil'),
-            area_ha: ef.area?.value || (isDocForged ? '12.50 हेक्टर' : '1.45 हेक्टर'),
-            assessment: ef.assessment?.value || '₹ 4,500/-',
-            ownership_type: ef.ownershipType?.value || (isDocForged ? '⚠️ अनधिकृत कर माफी (Illegal Tax Waiver & Forged Record)' : 'भोगवटादार वर्ग - १'),
-            liens: isDocForged
-              ? '❌ AI FRAUD ALERT: Seal Signature Mismatch & Bogus Index in 1M DB'
-              : 'निरंक (Clear Title / No Encumbrances)',
-          }
-        }
-
-        setCompletedResult(finalResult)
-        setLastExtractedResult(finalResult)
-
-        if (onComplete) {
-          onComplete(finalResult, selectedRawFile || currentFile)
-        }
-      }, 600)
+      failPipeline('Digitization', err)
     }
   }
 

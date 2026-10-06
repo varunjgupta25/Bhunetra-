@@ -52,7 +52,9 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install --index-url https://download.pytorch.org/whl/cpu torch==2.14.0 torchvision==0.29.0
+          pip install -r requirements-dev.txt
 
       - name: Test
         run: pytest -v tests

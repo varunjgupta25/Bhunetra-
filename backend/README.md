@@ -69,11 +69,11 @@ bhunetra backend/
 
 ### 1. Install Dependencies
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # runtime deps + pytest (use requirements.txt for production)
 ```
 
 ### 2. Configure Environment Variables
-Copy `.env.example` to `.env`:
+Copy `.env.example` to `.env` (it ships with production values) and switch it to local-dev settings:
 ```ini
 # Server
 ENVIRONMENT=development
@@ -86,6 +86,7 @@ CORS_ORIGINS=http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173
 # Firebase Cloud Connection (Optional during early dev)
 FIREBASE_CREDENTIALS_PATH=./firebase-adminsdk.json
 FIREBASE_STORAGE_BUCKET=bhunetra-sih.appspot.com
+# Mock dev tokens; off by default and always ignored when ENVIRONMENT=production
 ALLOW_DEV_AUTH_BYPASS=True
 
 # Bhashini OCR API

@@ -47,8 +47,8 @@ async def get_current_user(
     FastAPI dependency that validates Firebase ID Token.
     Returns AuthenticatedUser instance with uid, email, and role.
     """
-    # 1. Check if dev authorization bypass is allowed and no token or special dev token passed
-    if settings.ALLOW_DEV_AUTH_BYPASS:
+    # 1. Dev authorization bypass (opt-in via ALLOW_DEV_AUTH_BYPASS, never in production)
+    if settings.dev_auth_bypass_enabled:
         if not credentials:
             # Default dev user is admin in local testing
             return DEV_MOCK_USERS["admin"]

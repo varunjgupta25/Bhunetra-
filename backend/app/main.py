@@ -39,8 +39,25 @@ async def lifespan(app: FastAPI):
     initialize_firebase()
     if is_firebase_connected():
         logger.info("🔥 Connected to live Google Cloud Firebase services.")
+    elif settings.REQUIRE_FIREBASE:
+        raise RuntimeError(
+            "REQUIRE_FIREBASE=true but Firebase Admin SDK could not be initialized. "
+            f"Check FIREBASE_CREDENTIALS_PATH ('{settings.FIREBASE_CREDENTIALS_PATH}')."
+        )
+    elif settings.is_production:
+        logger.warning("=" * 78)
+        logger.warning("⚠️  PRODUCTION WITHOUT FIREBASE: using in-memory MOCK Firestore.")
+        logger.warning("⚠️  All records, audit logs and queue data are LOST on restart.")
+        logger.warning(f"⚠️  Mount the service-account JSON at FIREBASE_CREDENTIALS_PATH ('{settings.FIREBASE_CREDENTIALS_PATH}')")
+        logger.warning("⚠️  or set REQUIRE_FIREBASE=true to refuse to start in this state.")
+        logger.warning("=" * 78)
     else:
         logger.info("⚡ Running with local development storage & mock Firestore.")
+
+    if settings.dev_auth_bypass_enabled:
+        logger.warning("⚠️ ALLOW_DEV_AUTH_BYPASS is ON: mock dev tokens are accepted. Never enable this in production.")
+    elif settings.ALLOW_DEV_AUTH_BYPASS:
+        logger.warning("ALLOW_DEV_AUTH_BYPASS is ignored because ENVIRONMENT=production.")
 
     yield
     logger.info("🛑 Shutting down Bhunetra Backend API...")

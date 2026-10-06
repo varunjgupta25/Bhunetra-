@@ -117,6 +117,7 @@ async def test_api_health_and_root():
         data = response.json()
         assert data["status"] == "healthy"
 
-        root_resp = await client.get("/")
+        # "/" serves the SPA when frontend/dist exists; "/api" is the JSON root
+        root_resp = await client.get("/api")
         assert root_resp.status_code == 200
         assert root_resp.json()["project"] == "Bhunetra Backend (SIH26018)"

@@ -1,19 +1,24 @@
-fastapi
-uvicorn[standard]
-pydantic
-pydantic-settings
-firebase-admin
-httpx
-groq
-python-multipart
-python-dotenv
-pillow
-slowapi
-pytest
-pytest-asyncio
-# OCR engines
-easyocr
-pdf2image
-numpy
-reportlab
-qrcode[pil]
+fastapi==0.136.0
+uvicorn[standard]==0.51.0
+pydantic==2.13.3
+pydantic-settings==2.14.1
+firebase-admin==7.5.0
+httpx==0.28.1
+groq==1.6.0
+python-multipart==0.0.32
+python-dotenv==1.2.2
+pillow==12.3.0
+slowapi==0.1.10
+# OCR engines (Docker installs the CPU-only torch/torchvision wheels first)
+easyocr==1.7.2
+torch==2.14.0
+torchvision==0.29.0
+pdf2image==1.17.0
+numpy==2.3.3
+reportlab==5.0.1
+qrcode[pil]==8.2
+# ML field-confidence model (app/models/field_confidence_model.joblib)
+joblib==1.5.3
+scikit-learn==1.8.0
+# 3.3.x requires Python >= 3.12; 3.2.0 loads the bundled model with identical predictions
+xgboost==3.2.0
